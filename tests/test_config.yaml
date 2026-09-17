@@ -1,0 +1,143 @@
+aamp:
+  amplitude_type: abs
+  mask_ratio_range:
+  - 0.2
+  - 0.35
+  - 0.5
+  mask_token_ratio: 0.8
+  percentile_high: 1.0
+  percentile_low: 0.0
+  random_token_ratio: 0.1
+  unchanged_ratio: 0.1
+  use_aamp: true
+data:
+  bandpass_high: 30.0
+  bandpass_low: 0.5
+  channel_names:
+  - L04
+  - L05
+  - R04
+  - R05
+  channel_positions:
+  - - -1.0
+    - 0.5
+    - 0.5
+  - - -1.0
+    - 0.5
+    - -0.5
+  - - 1.0
+    - 0.5
+    - 0.5
+  - - 1.0
+    - 0.5
+    - -0.5
+  data_dir: data/processed
+  electrode_coordinate_frame: ear_local_normalized_xyz
+  electrode_coordinate_source: provisional_relative_template
+  electrode_coordinate_version: v0
+  left_channel_indices:
+  - 0
+  - 1
+  n_channels: 4
+  normalization_mode: train_subjects_only
+  normalize: true
+  right_channel_indices:
+  - 2
+  - 3
+  sampling_rate: 250
+  window_samples: 500
+  window_seconds: 2.0
+experiment_name: baseline_dual_branch
+model:
+  activation: silu
+  architecture: dual_branch
+  branch_conv1_kernel: 5
+  branch_conv1_out: 32
+  branch_conv1_stride: 2
+  branch_conv2_kernel: 3
+  branch_conv2_out: 64
+  branch_conv2_stride: 2
+  channel_reduce: none
+  d_model: 33
+  dropout: 0.0
+  freeze_pretrained_backbone: false
+  fusion_hidden: 64
+  fusion_use_diff: true
+  fusion_use_product: true
+  n_classes: 3
+  position_encoding_type: sin_cos
+  pretrained_backbone_path: null
+  pretrained_d_ff: 384
+  pretrained_n_heads: 8
+  pretrained_n_layers: 4
+  use_3d_embedding: true
+  use_iilp_pooling: true
+  use_multilayer_concat: true
+  use_pretrained_backbone: false
+output:
+  log_interval: 50
+  output_dir: artifacts/default
+  save_best_model: true
+  save_checkpoint_every: 0
+  save_config: true
+  use_tensorboard: true
+project_name: EEG-Attention-Decoding
+random_seed: 42
+search:
+  bayesian_acquisition: ei
+  bayesian_kernel: matern
+  bayesian_n_initial: 10
+  n_trials: 50
+  objective_metric: balanced_accuracy
+  quasi_random_method: sobol
+  search_epochs: 30
+  search_method: quasi_random
+  search_space:
+    batch_size:
+    - 16
+    - 64
+    - int
+    branch_conv1_out:
+    - 16
+    - 64
+    - int
+    branch_conv2_out:
+    - 32
+    - 128
+    - int
+    d_model:
+    - 24
+    - 48
+    - 72
+    - 96
+    dropout:
+    - 0.0
+    - 0.3
+    - float
+    fusion_hidden:
+    - 32
+    - 128
+    - int
+    learning_rate:
+    - 0.0001
+    - 0.005
+    - float
+training:
+  batch_size: 32
+  consistency_lambda: 0.0
+  early_stopping_metric: val_loss
+  early_stopping_patience: 5
+  epochs: 100
+  grad_clip_max_norm: 5.0
+  label_smoothing: 0.0
+  learning_rate: 0.001883
+  lr_scheduler: none
+  optimizer: adamw
+  seeds:
+  - 42
+  - 43
+  - 44
+  use_amp: true
+  use_consistency_loss: false
+  warmup_ratio: 0.0
+  weight_decay: 1.0e-05

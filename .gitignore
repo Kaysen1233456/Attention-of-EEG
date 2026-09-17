@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# 数据文件（大文件，不提交到git）
+data/raw/
+data/processed/
+*.npy
+*.npz
+*.mat
+*.zip
+
+# 实验产物（模型文件、训练结果）
+artifacts/*
+!artifacts/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.bak
+*.backup
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 模型权重
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.h5
+*.hdf5
+
+# 环境
+.env
+.venv/
+venv/
+env/

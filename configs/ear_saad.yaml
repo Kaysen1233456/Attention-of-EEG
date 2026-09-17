@@ -1,0 +1,124 @@
+# Ear-SAAD 数据集配置
+# 耳周EEG（around-ear EEG），19通道，20Hz，二分类听觉注意解码
+# 数据集：Geirnaert et al., Scientific Reports, 2025
+# Zenodo: https://zenodo.org/records/16536441
+
+project_name: EEG-Attention-Decoding
+experiment_name: ear_saad_dual_branch
+random_seed: 42
+
+data:
+  data_dir: data/processed/ear_saad
+  sampling_rate: 20  # Ear-SAAD预处理后采样率（1-9Hz带通后降采样到20Hz）
+  window_seconds: 5.0  # 5秒窗口（20Hz下=100点），AAD任务需要较长时间上下文
+  window_samples: 100  # 20Hz * 5s
+  n_channels: 19  # 耳周EEG：左耳9通道 + 右耳10通道
+  channel_names: [L01, L02, L03, L04, L05, L06, L07, L08, L09,
+                  R01, R02, R03, R04, R05, R06, R07, R08, R09, R10]
+  # 19通道耳周EEG的三维相对坐标 (x:左右, y:前后, z:上下)
+  # 基于cEEGrid C形阵列布局近似定义，左耳9个，右耳10个
+  # 坐标系：x负=左耳，x正=右耳；y正=耳前，y负=耳后；z正=上方，z负=下方
+  channel_positions:
+    # 左耳9通道（L01-L09，C形围绕左耳）
+    - [-0.9, 0.8, 0.7]    # L01: 耳前上方
+    - [-1.0, 0.9, 0.2]    # L02: 耳前
+    - [-0.9, 0.8, -0.3]   # L03: 耳前下方
+    - [-0.7, 0.5, -0.8]   # L04: 耳垂下方
+    - [-0.8, -0.3, -0.7]  # L05: 耳后下方
+    - [-1.0, -0.7, -0.2]  # L06: 耳后
+    - [-0.9, -0.6, 0.4]   # L07: 耳后上方
+    - [-0.7, -0.2, 0.8]   # L08: 耳上方
+    - [-0.5, 0.5, 0.9]    # L09: 太阳穴附近
+    # 右耳10通道（R01-R10，C形围绕右耳，比左耳多1个）
+    - [0.9, 0.8, 0.7]     # R01: 耳前上方
+    - [1.0, 0.9, 0.2]     # R02: 耳前
+    - [0.9, 0.8, -0.3]    # R03: 耳前下方
+    - [0.7, 0.5, -0.8]    # R04: 耳垂下方
+    - [0.8, -0.3, -0.7]   # R05: 耳后下方
+    - [1.0, -0.7, -0.2]   # R06: 耳后
+    - [0.9, -0.6, 0.4]    # R07: 耳后上方
+    - [0.7, -0.2, 0.8]    # R08: 耳上方
+    - [0.5, 0.5, 0.9]     # R09: 太阳穴附近
+    - [1.1, 0.0, 0.0]     # R10: 额外电极（耳正侧方，右耳比左耳多1个）
+  left_channel_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8]  # 左耳9通道
+  right_channel_indices: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]  # 右耳10通道
+  normalize: true
+  normalization_mode: train_subjects_only
+  # Ear-SAAD预处理数据已经过1-9Hz带通，不需要再滤波
+  bandpass_low: null
+  bandpass_high: null
+  electrode_coordinate_source: cEEGrid_C_shape_approximate_template
+  electrode_coordinate_frame: ear_local_normalized_xyz
+  electrode_coordinate_version: v1_ear_saad
+
+model:
+  architecture: dual_branch  # dual_branch / single_branch / mini_neuript
+  d_model: 33  # 必须能被3整除（3D坐标各占1/3）
+  # 双分支模型参数
+  branch_conv1_out: 32
+  branch_conv1_kernel: 5
+  branch_conv1_stride: 2
+  branch_conv2_out: 64
+  branch_conv2_kernel: 3
+  branch_conv2_stride: 2
+  fusion_hidden: 64
+  fusion_use_diff: true       # |左耳-右耳| 特征
+  fusion_use_product: true    # 左耳*右耳 特征
+  # 分类头
+  n_classes: 2  # Ear-SAAD是二分类：注意左说话人 / 注意右说话人
+  dropout: 0.0
+  activation: silu
+  # 3D电极嵌入
+  use_3d_embedding: true
+  position_encoding_type: sin_cos
+  # 通道降维方式
+  # none: 不平均，各通道各自过卷积（保留3D电极身份信息，19通道时参数量较大）
+  # mean: 对通道维取平均（简单但抹掉通道差异）
+  # flatten_linear: flatten后Linear投影回d_model（参数量适中，保留通道信息）
+  channel_reduce: none  # 阶段一先用none验证3D嵌入价值，后续可对比flatten_linear
+  use_multilayer_concat: true
+
+aamp:
+  use_aamp: true
+  mask_ratio_range: [0.2, 0.35, 0.5]
+  mask_token_ratio: 0.8
+  random_token_ratio: 0.1
+  unchanged_ratio: 0.1
+  percentile_low: 0.0
+  percentile_high: 1.0
+  amplitude_type: abs  # abs / raw
+
+training:
+  epochs: 100
+  batch_size: 32
+  learning_rate: 0.001883  # 从AAD Gen2.0迁移的最优lr
+  weight_decay: 1.0e-5
+  optimizer: adamw
+  grad_clip_max_norm: 5.0
+  early_stopping_patience: 5
+  early_stopping_metric: val_loss
+  seeds: [42, 43, 44]
+  use_amp: true
+  label_smoothing: 0.0
+  use_consistency_loss: false
+  consistency_lambda: 0.0
+  lr_scheduler: none
+  warmup_ratio: 0.0
+
+search:
+  search_method: quasi_random
+  n_trials: 50
+  quasi_random_method: sobol
+  bayesian_acquisition: ei
+  bayesian_n_initial: 10
+  bayesian_kernel: matern
+  objective_metric: balanced_accuracy
+  search_epochs: 30
+
+output:
+  output_dir: artifacts/ear_saad_baseline
+  save_best_model: true
+  save_checkpoint_every: 0
+  log_interval: 50
+  use_tensorboard: true
+  save_config: true

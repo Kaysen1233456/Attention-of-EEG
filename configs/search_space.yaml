@@ -1,0 +1,39 @@
+# 超参数搜索空间配置
+# 用于 search_hyperparams.py
+
+# 搜索空间定义：参数名 -> [下限, 上限, 类型]
+# 类型: "float" 或 "int"
+
+search_space:
+  learning_rate: [0.0001, 0.005, float]
+  batch_size: [16, 64, int]
+  d_model: [24, 48, 72, 96]
+  branch_conv1_out: [16, 64, int]
+  branch_conv2_out: [32, 128, int]
+  fusion_hidden: [32, 128, int]
+  dropout: [0.0, 0.3, float]
+
+# 搜索方法
+search_method: quasi_random  # quasi_random / bayesian
+
+# 准随机搜索配置
+quasi_random:
+  method: sobol  # sobol / halton / latin_hypercube
+  n_trials: 50
+
+# 贝叶斯优化配置
+bayesian:
+  n_trials: 30
+  n_initial: 10
+  acquisition: ei  # ei / ucb / poi
+  kernel: matern  # matern / rbf
+  kappa: 2.576  # UCB 探索参数
+  xi: 0.01  # EI/POI 探索参数
+
+# 目标
+objective:
+  metric: balanced_accuracy
+  maximize: true
+
+# 每次试验的训练轮数（搜索时减少加速）
+search_epochs: 30
