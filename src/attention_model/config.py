@@ -32,6 +32,7 @@ class DataConfig:
     right_channel_indices: List[int] = field(default_factory=lambda: [2, 3])
     normalize: bool = True
     normalization_mode: str = "train_subjects_only"  # train_subjects_only / global
+    normalize_clip_std: float = 8.0
     bandpass_low: float = 0.5
     bandpass_high: float = 30.0
     electrode_coordinate_source: str = "provisional_relative_template"
@@ -42,7 +43,7 @@ class DataConfig:
 @dataclass
 class ModelConfig:
     """模型配置"""
-    architecture: str = "dual_branch"  # dual_branch / mini_neuript / single_branch
+    architecture: str = "dual_branch"  # dual_branch / mini_neuript / single_branch / eegnet
     d_model: int = 33  # 嵌入维度，必须能被3整除（3D坐标各占1/3），默认33
     # 双分支模型参数
     branch_conv1_out: int = 32
@@ -75,6 +76,15 @@ class ModelConfig:
     pretrained_n_heads: int = 8
     pretrained_n_layers: int = 4
     pretrained_d_ff: int = 384
+    temporal_pool: int = 4
+    temporal_frontend: str = "none"  # none / conv; per-channel feature filtering before pooling
+    temporal_kernel: int = 5
+    iilp_pooling: str = "attention"  # attention / mean
+    iilp_attention_dropout: float = 0.1
+    use_pmoe: bool = True
+    classifier_type: str = "swiglu"  # swiglu / mlp
+    use_difference_feature: bool = True
+    use_product_feature: bool = True
 
 
 @dataclass
@@ -100,6 +110,9 @@ class TrainingConfig:
     """训练配置"""
     epochs: int = 100
     batch_size: int = 32
+    num_workers: int = 4
+    pin_memory: bool = True
+    persistent_workers: bool = True
     learning_rate: float = 0.001883  # 从AAD Gen2.0迁移的最优lr
     weight_decay: float = 1e-5
     optimizer: str = "adamw"  # adamw / adam / sgd
@@ -115,6 +128,8 @@ class TrainingConfig:
     # 学习率调度
     lr_scheduler: str = "none"  # none / cosine / step / onecycle
     warmup_ratio: float = 0.0
+    encoder_freeze_epochs: int = 0
+    encoder_lr_scale: float = 1.0
 
 
 @dataclass

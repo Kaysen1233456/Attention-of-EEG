@@ -21,6 +21,7 @@ data:
   right_channel_indices: [2, 3]
   normalize: true
   normalization_mode: train_subjects_only
+  normalize_clip_std: 8.0
   bandpass_low: 0.5
   bandpass_high: 30.0
   electrode_coordinate_source: provisional_relative_template
@@ -67,6 +68,9 @@ aamp:
 training:
   epochs: 100
   batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
   learning_rate: 0.001883
   weight_decay: 1.0e-5
   optimizer: adamw

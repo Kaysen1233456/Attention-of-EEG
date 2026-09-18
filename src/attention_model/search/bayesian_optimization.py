@@ -29,6 +29,7 @@ Args:
     xi: EI/POI 的探索参数
 """
 import numpy as np
+import math
 from typing import Dict, List, Tuple, Optional, Any, Callable
 from pathlib import Path
 import json
@@ -85,9 +86,12 @@ class BayesianOptimization:
                 distances = np.abs(np.asarray(spec, dtype=float) - float(value))
                 x[i] = 0.0 if distances.max() == 0 else float(distances.argmin()) / (len(spec) - 1)
                 continue
-            low, high, _ = spec
+            low, high, param_type = spec
             value = params[name]
-            x[i] = (value - low) / (high - low)
+            if param_type == "log_float":
+                x[i] = (math.log(value) - math.log(low)) / (math.log(high) - math.log(low))
+            else:
+                x[i] = (value - low) / (high - low)
         return np.clip(x, 0.0, 1.0)
 
     def _decode_sample(self, sample: np.ndarray) -> Dict[str, Any]:
@@ -99,11 +103,14 @@ class BayesianOptimization:
                 params[name] = spec[min(int(sample[i] * len(spec)), len(spec) - 1)]
                 continue
             low, high, param_type = spec
-            value = low + sample[i] * (high - low)
+            if param_type == "log_float":
+                value = math.exp(math.log(low) + sample[i] * (math.log(high) - math.log(low)))
+            else:
+                value = low + sample[i] * (high - low)
             if param_type == "int":
                 value = int(round(value))
                 value = max(low, min(high, value))
-            elif param_type == "float":
+            elif param_type in ("float", "log_float"):
                 value = float(value)
             params[name] = value
         return params
@@ -245,7 +252,15 @@ class BayesianOptimization:
 
     def record_result(self, params: Dict[str, Any], metrics: Dict[str, float]):
         """记录一次试验的结果"""
-        value = metrics.get(self.objective_metric, 0.0)
+        if self.objective_metric not in metrics:
+            raise ValueError(
+                f"Missing objective metric '{self.objective_metric}' in {metrics}"
+            )
+        value = float(metrics[self.objective_metric])
+        if not np.isfinite(value):
+            raise ValueError(
+                f"Non-finite objective metric '{self.objective_metric}': {value}"
+            )
 
         # 记录归一化空间的点
         x = self._encode_params(params)
@@ -283,18 +298,27 @@ class BayesianOptimization:
 
         for i in range(self.n_trials):
             params = self.get_next_params()
+            params["trial_idx"] = i
             phase = "初始随机" if i < self.n_initial else "贝叶斯优化"
             print(f"\n试验 {i+1}/{self.n_trials} ({phase}): {params}")
 
             try:
                 metrics = objective_fn(params)
                 self.record_result(params, metrics)
-                value = metrics.get(self.objective_metric, 0.0)
+                value = metrics[self.objective_metric]
                 print(f"  目标指标 {self.objective_metric}: {value:.4f}")
                 print(f"  当前最佳: {self.best_value:.4f}")
             except Exception as e:
                 print(f"  试验失败: {e}")
-                self.record_result(params, {self.objective_metric: -float("inf") if self.maximize else float("inf")})
+                self.results.append({
+                    "trial_idx": i,
+                    "params": params,
+                    "metrics": {},
+                    "objective_value": -float("inf") if self.maximize else float("inf"),
+                    "phase": phase,
+                    "status": "failed",
+                    "error": repr(e),
+                })
 
             if output_dir:
                 self.save_results(output_dir)

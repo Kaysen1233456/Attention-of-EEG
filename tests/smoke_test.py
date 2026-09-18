@@ -53,7 +53,9 @@ print('配置类测试通过！')
 # 测试6: 准随机搜索
 print('\n=== 测试6: 准随机搜索 ===')
 search_space = {'lr': [1e-4, 1e-2, 'float'], 'bs': [16, 64, 'int']}
-searcher = QuasiRandomSearch(search_space, n_trials=5, method='sobol')
+searcher = QuasiRandomSearch(
+    search_space, n_trials=5, method='sobol', objective_metric='acc'
+)
 params = searcher.get_trial_params(0)
 print(f'试验0参数: {params}')
 searcher.record_result(0, params, {'acc': 0.85})

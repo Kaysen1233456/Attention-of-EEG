@@ -50,14 +50,15 @@ def compute_roc_auc(probs: torch.Tensor, labels: torch.Tensor) -> float:
     labels_np = labels.cpu().numpy()
     n_classes = probs_np.shape[1]
 
-    try:
-        if n_classes == 2:
-            return float(roc_auc_score(labels_np, probs_np[:, 1]))
-        else:
-            # 多分类 one-vs-rest
-            return float(roc_auc_score(labels_np, probs_np, multi_class="ovr", average="macro"))
-    except Exception:
-        return 0.0
+    if n_classes == 2:
+        value = roc_auc_score(labels_np, probs_np[:, 1])
+    else:
+        # 多分类 one-vs-rest
+        value = roc_auc_score(labels_np, probs_np, multi_class="ovr", average="macro")
+    value = float(value)
+    if not np.isfinite(value):
+        raise ValueError(f"ROC-AUC is non-finite: {value}")
+    return value
 
 
 def compute_confusion_matrix(logits: torch.Tensor, labels: torch.Tensor) -> np.ndarray:
@@ -102,7 +103,13 @@ def compute_subject_level_accuracy(
     for subj in unique_subjects:
         mask = subjects_np == subj
         subj_probs = probs_np[mask]  # [n_windows, n_classes]
-        subj_label = labels_np[mask][0]  # 该被试的真实标签（所有窗口相同）
+        unique_labels = np.unique(labels_np[mask])
+        if len(unique_labels) != 1:
+            raise ValueError(
+                "subject-level aggregation requires one label per subject; "
+                f"subject={subj} has labels {unique_labels.tolist()}"
+            )
+        subj_label = unique_labels[0]
 
         # 对所有窗口的概率取平均
         avg_prob = subj_probs.mean(axis=0)  # [n_classes]
@@ -146,6 +153,41 @@ def compute_subject_level_accuracy(
     }
 
 
+def compute_subject_trial_accuracy(
+    probs: torch.Tensor,
+    labels: torch.Tensor,
+    subjects: torch.Tensor,
+    trials: torch.Tensor,
+) -> Dict[str, float]:
+    """Aggregate windows by (subject, trial), requiring one label per group."""
+    probs_np = probs.cpu().numpy()
+    labels_np = labels.cpu().numpy()
+    subjects_np = subjects.cpu().numpy()
+    trials_np = trials.cpu().numpy()
+    keys = np.stack([subjects_np, trials_np], axis=1)
+    group_probs = []
+    group_labels = []
+    for subject_id, trial_id in np.unique(keys, axis=0):
+        mask = (subjects_np == subject_id) & (trials_np == trial_id)
+        unique_labels = np.unique(labels_np[mask])
+        if len(unique_labels) != 1:
+            raise ValueError(
+                f"标签在 subject={subject_id}, trial={trial_id} 内不一致: {unique_labels.tolist()}"
+            )
+        group_probs.append(probs_np[mask].mean(axis=0))
+        group_labels.append(unique_labels[0])
+    group_probs = np.asarray(group_probs)
+    group_labels = np.asarray(group_labels)
+    predictions = group_probs.argmax(axis=1)
+    return {
+        "subject_trial_accuracy": float(accuracy_score(group_labels, predictions)),
+        "subject_trial_balanced_accuracy": float(
+            balanced_accuracy_score(group_labels, predictions)
+        ),
+        "subject_trial_n_groups": int(len(group_labels)),
+    }
+
+
 def evaluate_model(
     model: torch.nn.Module,
     loader: torch.utils.data.DataLoader,
@@ -170,6 +212,7 @@ def evaluate_model(
     all_logits = []
     all_labels = []
     all_subjects = []
+    all_trials = []
 
     with torch.no_grad():
         for batch in loader:
@@ -177,7 +220,7 @@ def evaluate_model(
             labels = batch["label"].to(device)
             subjects = batch.get("subject", None)
 
-            with torch.cuda.amp.autocast(enabled=use_amp and device.type == "cuda"):
+            with torch.amp.autocast(device_type=device.type, enabled=use_amp and device.type == "cuda"):
                 output = model(waveforms)
                 logits = output["logits"]
 
@@ -185,6 +228,9 @@ def evaluate_model(
             all_labels.append(labels.cpu())
             if subjects is not None:
                 all_subjects.append(subjects.cpu())
+            trials = batch.get("trial", None)
+            if trials is not None:
+                all_trials.append(trials.cpu())
 
     all_logits = torch.cat(all_logits, dim=0)
     all_labels = torch.cat(all_labels, dim=0)
@@ -200,11 +246,12 @@ def evaluate_model(
     }
 
     # 被试级评估
-    if len(all_subjects) > 0:
+    if len(all_subjects) > 0 and len(all_trials) > 0:
         all_subjects = torch.cat(all_subjects, dim=0)
+        all_trials = torch.cat(all_trials, dim=0)
         try:
-            subj_metrics = compute_subject_level_accuracy(
-                all_probs, all_labels, all_subjects, n_classes=n_classes,
+            subj_metrics = compute_subject_trial_accuracy(
+                all_probs, all_labels, all_subjects, all_trials,
             )
             metrics.update(subj_metrics)
         except Exception as e:

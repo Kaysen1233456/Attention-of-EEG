@@ -264,17 +264,36 @@ class MiniNeurIPT(nn.Module):
         dropout: float = 0.1,
         activation: str = "gelu",
         mask_ratio_range: Optional[List[float]] = None,
+        mask_token_ratio: float = 0.8,
+        random_token_ratio: float = 0.1,
+        unchanged_ratio: float = 0.1,
+        percentile_low: float = 0.0,
+        percentile_high: float = 1.0,
+        amplitude_type: str = "abs",
+        temporal_pool: int = 4,
+        use_pmoe: bool = True,
+        temporal_frontend: str = "none",
+        temporal_kernel: int = 5,
     ):
         super().__init__()
         self.d_model = d_model
         self.n_layers = n_layers
         self.n_channels = n_channels
-        self.temporal_pool = 4
+        if temporal_pool < 1:
+            raise ValueError("temporal_pool must be at least 1")
+        self.temporal_pool = temporal_pool
+        if temporal_frontend not in {"none", "conv"}:
+            raise ValueError("temporal_frontend must be none or conv")
+        if temporal_kernel < 1 or temporal_kernel % 2 == 0:
+            raise ValueError("temporal_kernel must be a positive odd integer")
+        self.temporal_frontend = temporal_frontend
 
         # 默认渐进式专家配置（4层版）
         if d_model % 3 != 0:
             raise ValueError(f"d_model ({d_model}) must be divisible by 3 when using 3D embedding")
-        if expert_config is None:
+        if not use_pmoe:
+            expert_config = [0] * n_layers
+        elif expert_config is None:
             schedule = [0, 2, 2, 4, 4, 6]
             expert_config = schedule[:n_layers]
             if len(expert_config) < n_layers:
@@ -292,10 +311,29 @@ class MiniNeurIPT(nn.Module):
             dropout=dropout,
         )
 
+        # Optional nonlinear temporal filter, shared across electrodes.
+        # Identity registers no parameters, preserving default checkpoint keys and RNG.
+        self.temporal_filter = (
+            nn.Sequential(
+                nn.Conv1d(d_model, d_model, temporal_kernel,
+                          padding=temporal_kernel // 2, groups=d_model),
+                nn.GELU(),
+                nn.Conv1d(d_model, d_model, 1),
+            ) if temporal_frontend == "conv" else nn.Identity()
+        )
+
         # 2. AAMP 掩码
         if mask_ratio_range is None:
             mask_ratio_range = [0.2, 0.35, 0.5]
-        self.aamp = AAMPMasking(mask_ratio_range=mask_ratio_range)
+        self.aamp = AAMPMasking(
+            mask_ratio_range=mask_ratio_range,
+            mask_token_ratio=mask_token_ratio,
+            random_token_ratio=random_token_ratio,
+            unchanged_ratio=unchanged_ratio,
+            percentile_low=percentile_low,
+            percentile_high=percentile_high,
+            amplitude_type=amplitude_type,
+        )
 
         # 3. Encoder 层
         self.layers = nn.ModuleList([
@@ -392,6 +430,10 @@ class MiniNeurIPT(nn.Module):
         """Encode an unmasked EEG batch for downstream transfer learning."""
         hidden = self.embedding(x)
         batch, channels, time, dim = hidden.shape
+        if self.temporal_frontend == "conv":
+            temporal = hidden.reshape(batch * channels, time, dim).transpose(1, 2)
+            temporal = temporal + self.temporal_filter(temporal)
+            hidden = temporal.transpose(1, 2).reshape(batch, channels, time, dim)
         if self.temporal_pool > 1 and time >= self.temporal_pool:
             hidden = hidden.reshape(batch * channels, time, dim).transpose(1, 2)
             hidden = F.avg_pool1d(hidden, kernel_size=self.temporal_pool, stride=self.temporal_pool)
@@ -470,5 +512,156 @@ class MiniNeurIPT(nn.Module):
             "architecture": "mini_neuript",
             "d_model": self.d_model,
             "n_layers": self.n_layers,
+            "temporal_pool": self.temporal_pool,
             "n_parameters": self.count_parameters(),
+        }
+
+
+class LearnableIILPPooling(nn.Module):
+    """Pool one ear's channel-time tokens with a sample-dependent attention map."""
+
+    def __init__(self, d_model: int, dropout: float = 0.1):
+        super().__init__()
+        hidden_dim = max(16, d_model // 2)
+        self.score = nn.Sequential(
+            nn.LayerNorm(d_model),
+            nn.Linear(d_model, hidden_dim),
+            nn.Tanh(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, 1),
+        )
+
+    def forward(self, tokens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        batch, channels, time, d_model = tokens.shape
+        tokens = tokens.reshape(batch, channels * time, d_model)
+        weights = torch.softmax(self.score(tokens).squeeze(-1), dim=-1)
+        pooled = torch.einsum("btd,bt->bd", tokens, weights)
+        return pooled, weights.reshape(batch, channels, time)
+
+
+class MiniNeurIPTClassifier(nn.Module):
+    """Supervised classifier that reuses the MiniNeurIPT encoder."""
+
+    def __init__(
+        self,
+        d_model: int = 96,
+        n_heads: int = 8,
+        d_ff: int = 384,
+        n_layers: int = 4,
+        n_channels: int = 4,
+        n_classes: int = 2,
+        channel_positions: Optional[List[Tuple[float, float, float]]] = None,
+        left_indices: Optional[List[int]] = None,
+        right_indices: Optional[List[int]] = None,
+        dropout: float = 0.2,
+        pretrained_path: Optional[str] = None,
+        freeze_encoder: bool = False,
+        temporal_pool: int = 4,
+        iilp_pooling: str = "attention",
+        iilp_attention_dropout: float = 0.1,
+        use_iilp_pooling: bool = True,
+        use_pmoe: bool = True,
+        classifier_type: str = "swiglu",
+        use_difference_feature: bool = True,
+        use_product_feature: bool = True,
+        temporal_frontend: str = "none",
+        temporal_kernel: int = 5,
+    ):
+        super().__init__()
+        self.n_channels = n_channels
+        self.n_classes = n_classes
+        self.left_indices = left_indices or list(range(n_channels // 2))
+        self.right_indices = right_indices or list(range(n_channels // 2, n_channels))
+        self.pretrained_path = pretrained_path
+        self.iilp_pooling = iilp_pooling
+        self.use_iilp_pooling = use_iilp_pooling
+        self.use_difference_feature = use_difference_feature
+        self.use_product_feature = use_product_feature
+        if classifier_type not in ("swiglu", "mlp"):
+            raise ValueError(f"Unsupported classifier_type: {classifier_type}")
+        self.classifier_type = classifier_type
+
+        self.encoder = MiniNeurIPT(
+            d_model=d_model,
+            n_heads=n_heads,
+            d_ff=d_ff,
+            n_layers=n_layers,
+            n_channels=n_channels,
+            channel_positions=channel_positions,
+            dropout=dropout,
+            temporal_pool=temporal_pool,
+            use_pmoe=use_pmoe,
+            temporal_frontend=temporal_frontend,
+            temporal_kernel=temporal_kernel,
+        )
+        if pretrained_path is not None:
+            state = torch.load(pretrained_path, map_location="cpu")
+            self.encoder.load_state_dict(state, strict=True)
+        if freeze_encoder:
+            for parameter in self.encoder.parameters():
+                parameter.requires_grad = False
+
+        if iilp_pooling not in ("attention", "mean"):
+            raise ValueError(f"Unsupported IILP pooling: {iilp_pooling}")
+        if use_iilp_pooling and iilp_pooling == "attention":
+            self.left_pool = LearnableIILPPooling(d_model, iilp_attention_dropout)
+            self.right_pool = LearnableIILPPooling(d_model, iilp_attention_dropout)
+
+        fusion_parts = 2 + int(use_difference_feature) + int(use_product_feature)
+        feature_dim = d_model * fusion_parts
+        if classifier_type == "swiglu":
+            classifier_block = SwiGLU(feature_dim, hidden_features=feature_dim, out_features=d_model)
+        else:
+            classifier_block = nn.Sequential(
+                nn.Linear(feature_dim, d_model), nn.SiLU(), nn.Dropout(dropout)
+            )
+        self.classifier = nn.Sequential(
+            nn.LayerNorm(feature_dim), classifier_block,
+            nn.Dropout(dropout), nn.Linear(d_model, n_classes),
+        )
+
+    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+        encoded = self.encoder.encode(x)
+        left_tokens = encoded[:, self.left_indices]
+        right_tokens = encoded[:, self.right_indices]
+        if self.use_iilp_pooling and self.iilp_pooling == "attention":
+            left_features, left_weights = self.left_pool(left_tokens)
+            right_features, right_weights = self.right_pool(right_tokens)
+        else:
+            left_features = left_tokens.mean(dim=(1, 2))
+            right_features = right_tokens.mean(dim=(1, 2))
+            left_weights = None
+            right_weights = None
+        fusion_parts = [left_features, right_features]
+        if self.use_difference_feature:
+            fusion_parts.append(torch.abs(left_features - right_features))
+        if self.use_product_feature:
+            fusion_parts.append(left_features * right_features)
+        fused = torch.cat(fusion_parts, dim=-1)
+        logits = self.classifier(fused)
+        output = {
+            "logits": logits,
+            "left_features": left_features,
+            "right_features": right_features,
+            "fused_features": fused,
+        }
+        if left_weights is not None:
+            output["left_iilp_weights"] = left_weights
+            output["right_iilp_weights"] = right_weights
+        return output
+
+    def count_parameters(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+    def get_model_info(self) -> Dict:
+        return {
+            "architecture": "mini_neuript_classifier",
+            "n_channels": self.n_channels,
+            "n_classes": self.n_classes,
+            "n_parameters": self.count_parameters(),
+            "pretrained_path": self.pretrained_path,
+            "iilp_pooling": self.iilp_pooling,
+            "use_iilp_pooling": self.use_iilp_pooling,
+            "use_pmoe": any(layer.moe.n_experts > 0 for layer in self.encoder.layers),
+            "classifier_type": self.classifier_type,
         }

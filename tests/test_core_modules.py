@@ -28,7 +28,10 @@ print(f'  第一个点: lr={first_params["lr"]:.6f}, batch_size={first_params["b
 
 # 测试贝叶斯优化
 from attention_model.search.bayesian_optimization import BayesianOptimization
-bo = BayesianOptimization(search_space, n_initial=5, acquisition='ei', maximize=True)
+bo = BayesianOptimization(
+    search_space, n_initial=5, acquisition='ei',
+    objective_metric='score', maximize=True
+)
 for i in range(5):
     params = bo.get_next_params()
     score = 0.5 + 0.1 * i  # 模拟分数

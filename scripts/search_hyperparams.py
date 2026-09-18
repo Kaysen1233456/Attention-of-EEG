@@ -16,56 +16,74 @@ import argparse
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
 
 import torch
 import json
 from attention_model.config import AttentionConfig
-from attention_model.models import DualBranchAttentionClassifier
 from attention_model.data import EEGDataset, create_synthetic_dataloaders
 from attention_model.training import AttentionTrainer, set_seed
 from attention_model.search import QuasiRandomSearch, BayesianOptimization
+from scripts.train import build_model, apply_ablation_variant
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="超参数搜索")
     parser.add_argument("--method", type=str, default="quasi_random", choices=["quasi_random", "bayesian"])
+    parser.add_argument("--config", type=str, default="configs/baseline.yaml", help="基础配置文件")
     parser.add_argument("--n-trials", type=int, default=50)
     parser.add_argument("--n-initial", type=int, default=10, help="贝叶斯优化的初始随机试验数")
     parser.add_argument("--quasi-method", type=str, default="sobol", choices=["sobol", "halton", "latin_hypercube"])
     parser.add_argument("--acquisition", type=str, default="ei", choices=["ei", "ucb", "poi"])
-    parser.add_argument("--data", type=str, default="data/processed")
+    parser.add_argument("--data", type=str, default=None, help="数据目录；未指定时使用配置文件的 data_dir")
     parser.add_argument("--output", type=str, default="artifacts/hyperparam_search")
     parser.add_argument("--search-epochs", type=int, default=30, help="搜索时每轮训练的epoch数（减少加速）")
+    parser.add_argument("--num-workers", type=int, default=None, help="DataLoader工作进程数")
     parser.add_argument("--synthetic", action="store_true", help="使用合成数据")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--ablation", type=str, default=None, choices=["B0", "B1", "B2", "B3", "B4", "B5"])
     return parser.parse_args()
 
 
-def make_objective_fn(base_config, loaders, device, search_epochs):
+def make_objective_fn(base_config, datasets, device, search_epochs, ablation=None):
     """创建目标函数（闭包，捕获 base_config 和 loaders）"""
     def objective(params: dict) -> dict:
-        # 复制基础配置
-        config = AttentionConfig.from_yaml("configs/baseline.yaml") if Path("configs/baseline.yaml").exists() else AttentionConfig()
+        config = AttentionConfig.from_yaml(base_config["_config_path"]) if base_config.get("_config_path") else AttentionConfig()
+        if base_config.get("data_dir"):
+            config.data.data_dir = base_config["data_dir"]
+        if base_config.get("num_workers") is not None:
+            config.training.num_workers = base_config["num_workers"]
+        if ablation:
+            apply_ablation_variant(config, ablation)
 
         # 应用搜索到的参数
         config.update_from_dict(params)
         config.training.epochs = search_epochs
-        config.output.output_dir = str(Path(base_config.output.output_dir) / f"trial_{params.get('trial_idx', 'tmp')}")
+        config.training.seeds = [base_config.get("seed", 42)]
+        config.output.output_dir = str(Path(base_config["output_dir"]) / f"trial_{params.get('trial_idx', 'tmp')}")
+        config.training.early_stopping_metric = "val_balanced_accuracy"
 
-        # 构建模型
-        model = DualBranchAttentionClassifier(
-            n_channels=config.data.n_channels,
-            d_model=config.model.d_model,
-            conv1_out=config.model.branch_conv1_out,
-            conv2_out=config.model.branch_conv2_out,
-            fusion_hidden=config.model.fusion_hidden,
-            n_classes=config.model.n_classes,
-            dropout=config.model.dropout,
-        )
-
-        # 训练
-        set_seed(42)
+        set_seed(base_config.get("seed", 42))
+        model = build_model(config)
+        loaders = {
+            "train": torch.utils.data.DataLoader(
+                datasets["train"],
+                batch_size=config.training.batch_size,
+                shuffle=True,
+                num_workers=config.training.num_workers,
+                pin_memory=config.training.pin_memory and device.type == "cuda",
+                persistent_workers=config.training.persistent_workers and config.training.num_workers > 0,
+            ),
+            "val": torch.utils.data.DataLoader(
+                datasets["val"],
+                batch_size=config.training.batch_size,
+                shuffle=False,
+                num_workers=config.training.num_workers,
+                pin_memory=config.training.pin_memory and device.type == "cuda",
+                persistent_workers=config.training.persistent_workers and config.training.num_workers > 0,
+            ),
+        }
         trainer = AttentionTrainer(
             model=model,
             config=config,
@@ -77,7 +95,7 @@ def make_objective_fn(base_config, loaders, device, search_epochs):
         results = trainer.train()
 
         # 返回验证集指标
-        val_metrics = results.get("final_val_metrics", {})
+        val_metrics = results.get("best_val_metrics") or results.get("final_val_metrics", {})
         return val_metrics
 
     return objective
@@ -94,11 +112,28 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 基础配置
-    base_config = AttentionConfig()
-    base_config.output.output_dir = str(output_dir)
+    base_config_obj = AttentionConfig.from_yaml(args.config) if args.config else AttentionConfig()
+    if args.data:
+        base_config_obj.data.data_dir = args.data
+    if args.num_workers is not None:
+        base_config_obj.training.num_workers = args.num_workers
+    base_config_obj.output.output_dir = str(output_dir)
+    base_config = {
+        "_config_path": args.config,
+        "output_dir": str(output_dir),
+        "data_dir": base_config_obj.data.data_dir,
+        "num_workers": base_config_obj.training.num_workers,
+        "seed": args.seed,
+    }
 
     # 搜索空间
-    search_space = {
+    search_space = dict(base_config_obj.search.search_space)
+    if "batch_size" not in search_space:
+        search_space["batch_size"] = [16, 256, "int"]
+    if "learning_rate" not in search_space:
+        search_space["learning_rate"] = [1e-5, 3e-3, "float"]
+    if not search_space:
+        search_space = {
         "learning_rate": [1e-4, 5e-3, "float"],
         "batch_size": [16, 64, "int"],
         "d_model": [24, 48, 72, 96],
@@ -106,17 +141,39 @@ def main():
         "branch_conv2_out": [32, 128, "int"],
         "fusion_hidden": [32, 128, "int"],
         "dropout": [0.0, 0.3, "float"],
-    }
+        }
 
     # 加载数据
     if args.synthetic:
-        loaders = create_synthetic_dataloaders(batch_size=32)
+        loaders = create_synthetic_dataloaders(
+            batch_size=base_config_obj.training.batch_size,
+            n_channels=base_config_obj.data.n_channels,
+            time_points=base_config_obj.data.window_samples,
+            n_classes=base_config_obj.model.n_classes,
+            num_workers=base_config_obj.training.num_workers,
+            pin_memory=base_config_obj.training.pin_memory and device.type == "cuda",
+            persistent_workers=base_config_obj.training.persistent_workers,
+        )
+        datasets = {
+            "train": loaders["train"].dataset,
+            "val": loaders["val"].dataset,
+        }
     else:
-        dataset = EEGDataset(args.data)
-        loaders = dataset.get_dataloaders(batch_size=32)
+        dataset = EEGDataset(
+            base_config_obj.data.data_dir,
+            normalize=base_config_obj.data.normalize,
+            clip_std=base_config_obj.data.normalize_clip_std,
+            include_test=False,
+            normalization_mode=base_config_obj.data.normalization_mode,
+            zero_channel_policy=base_config_obj.data.zero_channel_policy,
+        )
+        datasets = {
+            "train": dataset.train_dataset,
+            "val": dataset.val_dataset,
+        }
 
     # 创建目标函数
-    objective_fn = make_objective_fn(base_config, loaders, device, args.search_epochs)
+    objective_fn = make_objective_fn(base_config, datasets, device, args.search_epochs, args.ablation)
 
     # 运行搜索
     if args.method == "quasi_random":
@@ -152,8 +209,16 @@ def main():
     print(f"结果保存在: {output_dir}")
 
     # 保存最佳参数为 YAML
-    best_config = AttentionConfig()
+    best_config = AttentionConfig.from_yaml(args.config) if args.config else AttentionConfig()
+    if args.data:
+        best_config.data.data_dir = args.data
+    if args.ablation:
+        apply_ablation_variant(best_config, args.ablation)
     best_config.update_from_dict(summary["best_params"])
+    best_config.training.epochs = args.search_epochs
+    best_config.training.seeds = [args.seed]
+    best_config.training.early_stopping_metric = "val_balanced_accuracy"
+    best_config.training.num_workers = base_config_obj.training.num_workers
     best_config.save_yaml(output_dir / "best_config.yaml")
     print(f"最佳配置已保存: {output_dir / 'best_config.yaml'}")
 

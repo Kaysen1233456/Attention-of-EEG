@@ -1,0 +1,115 @@
+project_name: EEG-Attention-Decoding
+experiment_name: ear_saad_supervised_teacher_from_scratch
+random_seed: 42
+
+data:
+  data_dir: data/processed/ear_saad
+  sampling_rate: 20
+  window_seconds: 5.0
+  window_samples: 100
+  n_channels: 19
+  channel_names: [L01, L02, L03, L04, L05, L06, L07, L08, L09, R01, R02, R03, R04, R05, R06, R07, R08, R09, R10]
+  channel_positions:
+    - [-0.9, 0.8, 0.7]
+    - [-1.0, 0.9, 0.2]
+    - [-0.9, 0.8, -0.3]
+    - [-0.7, 0.5, -0.8]
+    - [-0.8, -0.3, -0.7]
+    - [-1.0, -0.7, -0.2]
+    - [-0.9, -0.6, 0.4]
+    - [-0.7, -0.2, 0.8]
+    - [-0.5, 0.5, 0.9]
+    - [0.9, 0.8, 0.7]
+    - [1.0, 0.9, 0.2]
+    - [0.9, 0.8, -0.3]
+    - [0.7, 0.5, -0.8]
+    - [0.8, -0.3, -0.7]
+    - [1.0, -0.7, -0.2]
+    - [0.9, -0.6, 0.4]
+    - [0.7, -0.2, 0.8]
+    - [0.5, 0.5, 0.9]
+    - [1.1, 0.0, 0.0]
+  left_channel_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  right_channel_indices: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+  normalize: true
+  normalization_mode: train_subjects_only
+  normalize_clip_std: 8.0
+  bandpass_low: null
+  bandpass_high: null
+  electrode_coordinate_source: cEEGrid_C_shape_approximate_template
+  electrode_coordinate_frame: ear_local_normalized_xyz
+  electrode_coordinate_version: v1_ear_saad
+
+model:
+  architecture: mini_neuript_classifier
+  d_model: 96
+  n_classes: 2
+  dropout: 0.15
+  activation: silu
+  use_3d_embedding: true
+  use_iilp_pooling: true
+  iilp_pooling: attention
+  iilp_attention_dropout: 0.10
+  temporal_pool: 4
+  # Deliberately disabled: the current AAMP checkpoint is not used downstream.
+  pretrained_backbone_path: null
+  freeze_pretrained_backbone: false
+  pretrained_n_heads: 8
+  pretrained_n_layers: 4
+  pretrained_d_ff: 384
+
+aamp:
+  use_aamp: true
+  mask_ratio_range: [0.2, 0.35, 0.5]
+  mask_token_ratio: 0.8
+  random_token_ratio: 0.1
+  unchanged_ratio: 0.1
+  percentile_low: 0.0
+  percentile_high: 1.0
+  amplitude_type: abs
+
+training:
+  epochs: 100
+  batch_size: 64
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  optimizer: adamw
+  grad_clip_max_norm: 1.0
+  early_stopping_patience: 15
+  early_stopping_metric: val_balanced_accuracy
+  seeds: [42, 43, 44]
+  use_amp: true
+  label_smoothing: 0.0
+  use_consistency_loss: false
+  consistency_lambda: 0.0
+  lr_scheduler: cosine
+  warmup_ratio: 0.1
+  # Supervised-from-scratch teacher: train encoder and classification head.
+  encoder_freeze_epochs: 0
+  encoder_lr_scale: 1.0
+
+search:
+  search_method: quasi_random
+  n_trials: 16
+  quasi_random_method: sobol
+  bayesian_acquisition: ei
+  bayesian_n_initial: 6
+  bayesian_kernel: matern
+  objective_metric: balanced_accuracy
+  search_epochs: 25
+  search_space:
+    learning_rate: [1.0e-5, 5.0e-4, log_float]
+    batch_size: [32, 64, 96, 128]
+    weight_decay: [1.0e-6, 1.0e-3, log_float]
+    dropout: [0.05, 0.25, float]
+
+output:
+  output_dir: artifacts/teacher_ear_saad
+  save_best_model: true
+  save_checkpoint_every: 0
+  log_interval: 50
+  use_tensorboard: true
+  save_config: true

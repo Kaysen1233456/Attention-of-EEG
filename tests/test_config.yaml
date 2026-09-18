@@ -41,6 +41,7 @@ data:
   n_channels: 4
   normalization_mode: train_subjects_only
   normalize: true
+  normalize_clip_std: 8.0
   right_channel_indices:
   - 2
   - 3
@@ -58,22 +59,31 @@ model:
   branch_conv2_out: 64
   branch_conv2_stride: 2
   channel_reduce: none
+  classifier_type: swiglu
   d_model: 33
   dropout: 0.0
   freeze_pretrained_backbone: false
   fusion_hidden: 64
   fusion_use_diff: true
   fusion_use_product: true
+  iilp_attention_dropout: 0.1
+  iilp_pooling: attention
   n_classes: 3
   position_encoding_type: sin_cos
   pretrained_backbone_path: null
   pretrained_d_ff: 384
   pretrained_n_heads: 8
   pretrained_n_layers: 4
+  temporal_frontend: none
+  temporal_kernel: 5
+  temporal_pool: 4
   use_3d_embedding: true
+  use_difference_feature: true
   use_iilp_pooling: true
   use_multilayer_concat: true
+  use_pmoe: true
   use_pretrained_backbone: false
+  use_product_feature: true
 output:
   log_interval: 50
   output_dir: artifacts/default
@@ -127,12 +137,17 @@ training:
   consistency_lambda: 0.0
   early_stopping_metric: val_loss
   early_stopping_patience: 5
+  encoder_freeze_epochs: 0
+  encoder_lr_scale: 1.0
   epochs: 100
   grad_clip_max_norm: 5.0
   label_smoothing: 0.0
   learning_rate: 0.001883
   lr_scheduler: none
+  num_workers: 4
   optimizer: adamw
+  persistent_workers: true
+  pin_memory: true
   seeds:
   - 42
   - 43

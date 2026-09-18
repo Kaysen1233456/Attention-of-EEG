@@ -1,0 +1,8 @@
+[
+  {"label": "B0 CNN", "result_dir": "artifacts/ablation/B0", "minimum_balanced_accuracy": 0.5341},
+  {"label": "B1 Transformer", "result_dir": "artifacts/ablation/B1", "minimum_balanced_accuracy": 0.5341},
+  {"label": "B2 + IILP", "result_dir": "artifacts/ablation/B2", "minimum_balanced_accuracy": 0.5441},
+  {"label": "B3 + bilateral fusion", "result_dir": "artifacts/ablation/B3", "minimum_balanced_accuracy": 0.5541},
+  {"label": "B4 + PMoE", "result_dir": "artifacts/ablation/B4", "minimum_balanced_accuracy": 0.5541},
+  {"label": "B5 + SwiGLU", "result_dir": "artifacts/ablation/B5", "minimum_balanced_accuracy": 0.5641}
+]

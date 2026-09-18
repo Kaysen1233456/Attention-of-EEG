@@ -42,10 +42,14 @@ class EEGWindowDataset(Dataset):
         waveforms: np.ndarray,
         labels: np.ndarray,
         subjects: Optional[np.ndarray] = None,
+        trials: Optional[np.ndarray] = None,
         transform: Optional[Any] = None,
         normalize: bool = True,
         mean: Optional[np.ndarray] = None,
         std: Optional[np.ndarray] = None,
+        clip_std: Optional[float] = None,
+        normalization_mode: str = "train_subjects_only",
+        zero_channel_policy: str = "retain",
     ):
         super().__init__()
         assert waveforms.ndim == 3, f"waveforms 应该是3维 [N, C, T]，当前是 {waveforms.ndim} 维"
@@ -54,11 +58,19 @@ class EEGWindowDataset(Dataset):
         self.waveforms = waveforms.astype(np.float32)
         self.labels = labels
         self.subjects = subjects
+        self.trials = trials
         self.transform = transform
         self.normalize = normalize
+        self.clip_std = clip_std
+        if normalization_mode not in {"train_subjects_only", "window_local"}:
+            raise ValueError(f"Unsupported normalization_mode: {normalization_mode}")
+        if zero_channel_policy not in {"retain", "zero_after_normalization"}:
+            raise ValueError(f"Unsupported zero_channel_policy: {zero_channel_policy}")
+        self.normalization_mode = normalization_mode
+        self.zero_channel_policy = zero_channel_policy
 
         # 计算归一化统计量
-        if normalize:
+        if normalize and normalization_mode == "train_subjects_only":
             if mean is not None and std is not None:
                 self.mean = mean.astype(np.float32)
                 self.std = std.astype(np.float32)
@@ -79,10 +91,21 @@ class EEGWindowDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         waveform = self.waveforms[idx]  # [C, T]
         label = self.labels[idx]
+        zero_channel_mask = np.all(waveform == 0.0, axis=-1)
 
         # 归一化
-        if self.normalize and self.mean is not None:
-            waveform = (waveform - self.mean) / self.std
+        if self.normalize:
+            if self.normalization_mode == "window_local":
+                mean = waveform.mean(axis=-1, keepdims=True)
+                std = waveform.std(axis=-1, keepdims=True) + 1e-8
+                waveform = (waveform - mean) / std
+            elif self.mean is not None:
+                waveform = (waveform - self.mean) / self.std
+            if self.clip_std is not None and self.clip_std > 0:
+                waveform = np.clip(waveform, -self.clip_std, self.clip_std)
+            waveform = np.nan_to_num(waveform, nan=0.0, posinf=0.0, neginf=0.0)
+            if self.zero_channel_policy == "zero_after_normalization":
+                waveform[zero_channel_mask] = 0.0
 
         # 数据增强
         if self.transform is not None:
@@ -104,6 +127,8 @@ class EEGWindowDataset(Dataset):
 
         if self.subjects is not None:
             output["subject"] = self.subjects[idx]
+        if self.trials is not None:
+            output["trial"] = self.trials[idx]
 
         return output
 
@@ -149,16 +174,40 @@ class EEGDataset:
         data_dir: str,
         normalize: bool = True,
         use_train_stats: bool = True,
+        clip_std: Optional[float] = 8.0,
+        include_test: bool = True,
+        fold: Optional[Dict] = None,
+        normalization_mode: str = "train_subjects_only",
+        zero_channel_policy: str = "retain",
     ):
         self.data_dir = Path(data_dir)
         self.normalize = normalize
         self.use_train_stats = use_train_stats
+        self.include_test = include_test
+        self.clip_std = clip_std
+        self.normalization_mode = normalization_mode
+        self.zero_channel_policy = zero_channel_policy
 
         # 加载数据
         self._load_data()
+        if fold is not None:
+            if include_test:
+                raise ValueError("Development folds require include_test=False")
+            train_ids = set(fold["train_subjects"])
+            val_ids = set(fold["val_subjects"])
+            if train_ids & val_ids:
+                raise ValueError("Overlapping fold subjects")
+            combined = {key: np.concatenate([getattr(self, f"train_{key}"), getattr(self, f"val_{key}")])
+                        for key in ("waveforms", "labels", "subjects", "trials")}
+            if train_ids | val_ids != set(combined["subjects"].tolist()):
+                raise ValueError("Fold must partition all development subjects")
+            for split, subject_ids in (("train", train_ids), ("val", val_ids)):
+                mask = np.isin(combined["subjects"], list(subject_ids))
+                for key, values in combined.items():
+                    setattr(self, f"{split}_{key}", values[mask])
 
         # 计算归一化统计量（用训练集）
-        if normalize and use_train_stats:
+        if normalize and use_train_stats and normalization_mode == "train_subjects_only":
             self.mean = self.train_waveforms.mean(axis=(0, 2), keepdims=True).squeeze(0)  # [C, 1]
             self.std = self.train_waveforms.std(axis=(0, 2), keepdims=True).squeeze(0) + 1e-8
         else:
@@ -167,17 +216,20 @@ class EEGDataset:
 
         # 创建数据集
         self.train_dataset = EEGWindowDataset(
-            self.train_waveforms, self.train_labels, self.train_subjects,
-            normalize=normalize, mean=self.mean, std=self.std,
+            self.train_waveforms, self.train_labels, self.train_subjects, self.train_trials,
+            normalize=normalize, mean=self.mean, std=self.std, clip_std=clip_std,
+            normalization_mode=normalization_mode, zero_channel_policy=zero_channel_policy,
         )
         self.val_dataset = EEGWindowDataset(
-            self.val_waveforms, self.val_labels, self.val_subjects,
-            normalize=normalize, mean=self.mean, std=self.std,
+            self.val_waveforms, self.val_labels, self.val_subjects, self.val_trials,
+            normalize=normalize, mean=self.mean, std=self.std, clip_std=clip_std,
+            normalization_mode=normalization_mode, zero_channel_policy=zero_channel_policy,
         )
         self.test_dataset = EEGWindowDataset(
-            self.test_waveforms, self.test_labels, self.test_subjects,
-            normalize=normalize, mean=self.mean, std=self.std,
-        )
+            self.test_waveforms, self.test_labels, self.test_subjects, self.test_trials,
+            normalize=normalize, mean=self.mean, std=self.std, clip_std=clip_std,
+            normalization_mode=normalization_mode, zero_channel_policy=zero_channel_policy,
+        ) if include_test else None
 
     def _load_data(self):
         """加载 npy 数据"""
@@ -186,6 +238,8 @@ class EEGDataset:
         self.train_labels = np.load(self.data_dir / "train_labels.npy")
         train_subj_path = self.data_dir / "train_subjects.npy"
         self.train_subjects = np.load(train_subj_path) if train_subj_path.exists() else None
+        train_trial_path = self.data_dir / "train_trials.npy"
+        self.train_trials = np.load(train_trial_path) if train_trial_path.exists() else None
 
         # 验证集
         val_wave_path = self.data_dir / "val_waveforms.npy"
@@ -194,6 +248,8 @@ class EEGDataset:
             self.val_labels = np.load(self.data_dir / "val_labels.npy")
             val_subj_path = self.data_dir / "val_subjects.npy"
             self.val_subjects = np.load(val_subj_path) if val_subj_path.exists() else None
+            val_trial_path = self.data_dir / "val_trials.npy"
+            self.val_trials = np.load(val_trial_path) if val_trial_path.exists() else None
         else:
             # 没有验证集，从训练集分 10%
             n = len(self.train_waveforms)
@@ -204,28 +260,37 @@ class EEGDataset:
             self.val_waveforms = self.train_waveforms[val_idx]
             self.val_labels = self.train_labels[val_idx]
             self.val_subjects = self.train_subjects[val_idx] if self.train_subjects is not None else None
+            self.val_trials = self.train_trials[val_idx] if self.train_trials is not None else None
             self.train_waveforms = self.train_waveforms[train_idx]
             self.train_labels = self.train_labels[train_idx]
             self.train_subjects = self.train_subjects[train_idx] if self.train_subjects is not None else None
+            self.train_trials = self.train_trials[train_idx] if self.train_trials is not None else None
 
         # 测试集
         test_wave_path = self.data_dir / "test_waveforms.npy"
+        if not self.include_test:
+            return
         if test_wave_path.exists():
             self.test_waveforms = np.load(test_wave_path)
             self.test_labels = np.load(self.data_dir / "test_labels.npy")
             test_subj_path = self.data_dir / "test_subjects.npy"
             self.test_subjects = np.load(test_subj_path) if test_subj_path.exists() else None
+            test_trial_path = self.data_dir / "test_trials.npy"
+            self.test_trials = np.load(test_trial_path) if test_trial_path.exists() else None
         else:
             # 没有测试集，用验证集代替
             self.test_waveforms = self.val_waveforms
             self.test_labels = self.val_labels
             self.test_subjects = self.val_subjects
+            self.test_trials = self.val_trials
 
     def get_dataloaders(
         self,
         batch_size: int = 32,
         num_workers: int = 0,
         shuffle_train: bool = True,
+        pin_memory: bool = True,
+        persistent_workers: bool = False,
     ) -> Dict[str, DataLoader]:
         """
         获取 train/val/test 的 DataLoader
@@ -243,7 +308,8 @@ class EEGDataset:
             batch_size=batch_size,
             shuffle=shuffle_train,
             num_workers=num_workers,
-            pin_memory=True,
+            pin_memory=pin_memory,
+            persistent_workers=persistent_workers and num_workers > 0,
             drop_last=False,
         )
         val_loader = DataLoader(
@@ -251,15 +317,17 @@ class EEGDataset:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=True,
+            pin_memory=pin_memory,
+            persistent_workers=persistent_workers and num_workers > 0,
         )
         test_loader = DataLoader(
             self.test_dataset,
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=True,
-        )
+            pin_memory=pin_memory,
+            persistent_workers=persistent_workers and num_workers > 0,
+        ) if self.include_test else None
         return {
             "train": train_loader,
             "val": val_loader,
@@ -268,19 +336,28 @@ class EEGDataset:
 
     def get_info(self) -> Dict:
         """获取数据集信息"""
+        test_info = {
+            "n_test": 0,
+            "test_label_dist": {},
+            "test_subjects": [],
+        }
+        if self.test_dataset is not None:
+            test_info = {
+                "n_test": len(self.test_dataset),
+                "test_label_dist": self.test_dataset.get_label_distribution(),
+                "test_subjects": self.test_dataset.get_subject_ids(),
+            }
         return {
             "data_dir": str(self.data_dir),
             "n_train": len(self.train_dataset),
             "n_val": len(self.val_dataset),
-            "n_test": len(self.test_dataset),
+            **test_info,
             "n_channels": self.train_dataset.n_channels,
             "time_points": self.train_dataset.time_points,
             "train_label_dist": self.train_dataset.get_label_distribution(),
             "val_label_dist": self.val_dataset.get_label_distribution(),
-            "test_label_dist": self.test_dataset.get_label_distribution(),
             "train_subjects": self.train_dataset.get_subject_ids(),
             "val_subjects": self.val_dataset.get_subject_ids(),
-            "test_subjects": self.test_dataset.get_subject_ids(),
         }
 
 
@@ -333,6 +410,9 @@ def create_synthetic_dataloaders(
     time_points: int = 500,
     n_classes: int = 3,
     seed: int = 42,
+    num_workers: int = 0,
+    pin_memory: bool = False,
+    persistent_workers: bool = False,
 ) -> Dict[str, DataLoader]:
     """
     创建合成数据的 DataLoader（用于冒烟测试）
@@ -345,7 +425,19 @@ def create_synthetic_dataloaders(
     test_ds = SyntheticEEGDataset(n_test, n_channels, time_points, n_classes, seed + 2)
 
     return {
-        "train": DataLoader(train_ds, batch_size=batch_size, shuffle=True),
-        "val": DataLoader(val_ds, batch_size=batch_size, shuffle=False),
-        "test": DataLoader(test_ds, batch_size=batch_size, shuffle=False),
+        "train": DataLoader(
+            train_ds, batch_size=batch_size, shuffle=True,
+            num_workers=num_workers, pin_memory=pin_memory,
+            persistent_workers=persistent_workers and num_workers > 0,
+        ),
+        "val": DataLoader(
+            val_ds, batch_size=batch_size, shuffle=False,
+            num_workers=num_workers, pin_memory=pin_memory,
+            persistent_workers=persistent_workers and num_workers > 0,
+        ),
+        "test": DataLoader(
+            test_ds, batch_size=batch_size, shuffle=False,
+            num_workers=num_workers, pin_memory=pin_memory,
+            persistent_workers=persistent_workers and num_workers > 0,
+        ),
     }

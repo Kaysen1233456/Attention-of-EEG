@@ -15,15 +15,16 @@ import argparse
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "src"))
 
 import torch
 import json
 import numpy as np
 from attention_model.config import AttentionConfig
-from attention_model.models import DualBranchAttentionClassifier, SingleBranchAttentionClassifier, MiniNeurIPT
 from attention_model.data import EEGDataset, create_synthetic_dataloaders
 from attention_model.evaluation import evaluate_model, compute_subject_level_accuracy
+from scripts.train import build_model
 
 
 def parse_args():
@@ -35,6 +36,11 @@ def parse_args():
     parser.add_argument("--synthetic", action="store_true")
     parser.add_argument("--device", type=str, default=None)
     return parser.parse_args()
+
+
+def build_model_for_evaluation(config: AttentionConfig):
+    """Build an evaluation model with the same architecture switches as training."""
+    return build_model(config)
 
 
 def main():
@@ -49,44 +55,7 @@ def main():
     else:
         config = AttentionConfig()
 
-    if config.model.architecture == "dual_branch":
-        model = DualBranchAttentionClassifier(
-            n_channels=config.data.n_channels,
-            left_indices=config.data.left_channel_indices,
-            right_indices=config.data.right_channel_indices,
-            d_model=config.model.d_model,
-            conv1_out=config.model.branch_conv1_out,
-            conv2_out=config.model.branch_conv2_out,
-            fusion_hidden=config.model.fusion_hidden,
-            n_classes=config.model.n_classes,
-            activation=config.model.activation,
-            dropout=config.model.dropout,
-            use_3d_embedding=config.model.use_3d_embedding,
-            channel_reduce=config.model.channel_reduce,
-            use_multilayer_concat=config.model.use_multilayer_concat,
-            use_diff_feature=config.model.fusion_use_diff,
-            use_product_feature=config.model.fusion_use_product,
-            channel_positions=config.data.channel_positions,
-            use_iilp_pooling=config.model.use_iilp_pooling,
-            pretrained_path=config.model.pretrained_backbone_path,
-            pretrained_n_heads=config.model.pretrained_n_heads,
-            pretrained_n_layers=config.model.pretrained_n_layers,
-            pretrained_d_ff=config.model.pretrained_d_ff,
-            freeze_pretrained_backbone=config.model.freeze_pretrained_backbone,
-        )
-    elif config.model.architecture == "single_branch":
-        model = SingleBranchAttentionClassifier(
-            n_channels=config.data.n_channels, d_model=config.model.d_model,
-            conv1_out=config.model.branch_conv1_out, conv2_out=config.model.branch_conv2_out,
-            hidden_dim=config.model.fusion_hidden, n_classes=config.model.n_classes,
-            activation=config.model.activation, dropout=config.model.dropout,
-            use_3d_embedding=config.model.use_3d_embedding,
-            channel_reduce=config.model.channel_reduce,
-            use_multilayer_concat=config.model.use_multilayer_concat,
-            channel_positions=config.data.channel_positions,
-        )
-    else:
-        raise ValueError(f"Unsupported evaluation architecture: {config.model.architecture}")
+    model = build_model_for_evaluation(config)
 
     # 加载权重
     model.load_state_dict(torch.load(args.model_path, map_location=device))
@@ -97,7 +66,7 @@ def main():
     if args.synthetic:
         loaders = create_synthetic_dataloaders(batch_size=32)
     else:
-        dataset = EEGDataset(args.data)
+        dataset = EEGDataset(args.data, normalize=config.data.normalize, clip_std=config.data.normalize_clip_std)
         loaders = dataset.get_dataloaders(batch_size=32)
 
     # 评估

@@ -21,7 +21,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler, autocast
+from torch import amp
 from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 from tqdm import tqdm
@@ -33,7 +33,7 @@ from ..evaluation.metrics import (
     compute_macro_f1,
     compute_roc_auc,
     compute_confusion_matrix,
-    compute_subject_level_accuracy,
+    compute_subject_trial_accuracy,
 )
 from .losses import AttentionLoss
 
@@ -91,45 +91,44 @@ class AttentionTrainer:
             consistency_lambda=config.training.consistency_lambda,
         )
 
-        # 优化器
-        if config.training.optimizer == "adamw":
-            self.optimizer = torch.optim.AdamW(
-                model.parameters(),
-                lr=config.training.learning_rate,
-                weight_decay=config.training.weight_decay,
-            )
-        elif config.training.optimizer == "adam":
-            self.optimizer = torch.optim.Adam(
-                model.parameters(),
-                lr=config.training.learning_rate,
-                weight_decay=config.training.weight_decay,
-            )
-        else:
-            self.optimizer = torch.optim.AdamW(
-                model.parameters(),
-                lr=config.training.learning_rate,
-                weight_decay=config.training.weight_decay,
-            )
+        self._set_encoder_trainable(config.training.encoder_freeze_epochs == 0)
+        self.optimizer = self._build_optimizer()
 
         # AMP
         self.use_amp = config.training.use_amp and self.device.type == "cuda"
-        self.scaler = GradScaler(enabled=self.use_amp)
+        if hasattr(amp, "GradScaler"):
+            self.scaler = amp.GradScaler("cuda", enabled=self.use_amp)
+        else:
+            # PyTorch versions before torch.amp.GradScaler used the CUDA namespace.
+            self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
         # 学习率调度器
         self.scheduler = None
         if config.training.lr_scheduler == "cosine":
-            self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                self.optimizer, T_max=config.training.epochs
-            )
+            warmup_steps = int(config.training.epochs * config.training.warmup_ratio)
+            total_steps = config.training.epochs
+
+            def schedule(step: int) -> float:
+                if warmup_steps > 0 and step < warmup_steps:
+                    return float(step + 1) / warmup_steps
+                if total_steps <= warmup_steps:
+                    return 1.0
+                progress = (step - warmup_steps) / (total_steps - warmup_steps)
+                return 0.5 * (1.0 + np.cos(np.pi * min(progress, 1.0)))
+
+            self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, schedule)
 
         # 输出目录
         self.output_dir = Path(config.output.output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self._write_run_metadata()
 
         # 训练状态
         self.current_epoch = 0
         self.best_val_loss = float("inf")
         self.best_val_metric = -float("inf")
+        self.best_epoch = 0
+        self.best_val_metrics = None
         self.patience_counter = 0
         self.history = {
             "train_loss": [],
@@ -145,9 +144,64 @@ class AttentionTrainer:
             config.save_yaml(self.output_dir / "config.yaml")
             config.save_json(self.output_dir / "config.json")
 
+    def _write_run_metadata(self) -> None:
+        """Persist immutable run identity before training starts."""
+        metadata = {
+            "torch_version": torch.__version__,
+            "device": str(self.device),
+            "seed": getattr(self.config, "random_seed", None),
+            "epochs": self.config.training.epochs,
+            "precision": "amp" if self.use_amp else "float32",
+            "model_parameter_count": int(sum(p.numel() for p in self.model.parameters())),
+            "train_batches": len(self.train_loader),
+            "val_batches": len(self.val_loader),
+            "test_loader_present": self.test_loader is not None,
+            "best_checkpoint": "best_model.pt",
+        }
+        with open(self.output_dir / "run_metadata.json", "w", encoding="utf-8") as handle:
+            json.dump(metadata, handle, indent=2)
+
+    def _set_encoder_trainable(self, trainable: bool) -> None:
+        """Freeze only a transferable encoder; classifiers without one remain unchanged."""
+        encoder = getattr(self.model, "encoder", None)
+        if encoder is None:
+            return
+        for parameter in encoder.parameters():
+            parameter.requires_grad = trainable
+
+    def _build_optimizer(self):
+        encoder = getattr(self.model, "encoder", None)
+        if encoder is None:
+            parameter_groups = [{"params": self.model.parameters()}]
+        else:
+            encoder_params = list(encoder.parameters())
+            encoder_ids = {id(parameter) for parameter in encoder_params}
+            head_params = [
+                parameter for parameter in self.model.parameters()
+                if id(parameter) not in encoder_ids
+            ]
+            parameter_groups = [
+                {
+                    "params": encoder_params,
+                    "lr": self.config.training.learning_rate * self.config.training.encoder_lr_scale,
+                },
+                {"params": head_params, "lr": self.config.training.learning_rate},
+            ]
+
+        optimizer_cls = torch.optim.Adam if self.config.training.optimizer == "adam" else torch.optim.AdamW
+        return optimizer_cls(
+            parameter_groups,
+            lr=self.config.training.learning_rate,
+            weight_decay=self.config.training.weight_decay,
+        )
+
     def train_epoch(self) -> Dict[str, float]:
         """训练一个 epoch"""
         self.model.train()
+        if self.current_epoch < self.config.training.encoder_freeze_epochs:
+            encoder = getattr(self.model, "encoder", None)
+            if encoder is not None:
+                encoder.eval()
         total_loss = 0.0
         total_correct = 0
         total_samples = 0
@@ -155,15 +209,15 @@ class AttentionTrainer:
 
         pbar = tqdm(self.train_loader, desc=f"Epoch {self.current_epoch+1}", leave=False)
         for batch in pbar:
-            waveforms = batch["waveform"].to(self.device)
-            labels = batch["label"].to(self.device)
+            waveforms = batch["waveform"].to(self.device, non_blocking=True)
+            labels = batch["label"].to(self.device, non_blocking=True)
             subjects = batch.get("subject", None)
             if subjects is not None:
-                subjects = subjects.to(self.device)
+                subjects = subjects.to(self.device, non_blocking=True)
 
             self.optimizer.zero_grad()
 
-            with autocast(enabled=self.use_amp):
+            with amp.autocast(device_type=self.device.type, enabled=self.use_amp):
                 output = self.model(waveforms)
                 logits = output["logits"]
                 loss_dict = self.criterion(logits, labels, subjects)
@@ -206,17 +260,18 @@ class AttentionTrainer:
         all_logits = []
         all_labels = []
         all_subjects = []
+        all_trials = []
         total_loss = 0.0
         n_batches = 0
 
         for batch in loader:
-            waveforms = batch["waveform"].to(self.device)
-            labels = batch["label"].to(self.device)
+            waveforms = batch["waveform"].to(self.device, non_blocking=True)
+            labels = batch["label"].to(self.device, non_blocking=True)
             subjects = batch.get("subject", None)
             if subjects is not None:
-                subjects = subjects.to(self.device)
+                subjects = subjects.to(self.device, non_blocking=True)
 
-            with autocast(enabled=self.use_amp):
+            with amp.autocast(device_type=self.device.type, enabled=self.use_amp):
                 output = self.model(waveforms)
                 logits = output["logits"]
                 loss_dict = self.criterion(logits, labels, subjects)
@@ -226,6 +281,9 @@ class AttentionTrainer:
             all_labels.append(labels.cpu())
             if subjects is not None:
                 all_subjects.append(subjects.cpu())
+            trials = batch.get("trial", None)
+            if trials is not None:
+                all_trials.append(trials.cpu())
             n_batches += 1
 
         all_logits = torch.cat(all_logits, dim=0)
@@ -240,10 +298,12 @@ class AttentionTrainer:
         }
 
         # ROC-AUC（二分类或多分类都支持）
-        try:
-            metrics["roc_auc"] = compute_roc_auc(all_probs, all_labels)
-        except Exception:
-            metrics["roc_auc"] = 0.0
+        metrics["roc_auc"] = compute_roc_auc(all_probs, all_labels)
+        if not all(np.isfinite(value) for value in (
+            metrics["loss"], metrics["accuracy"], metrics["balanced_accuracy"],
+            metrics["macro_f1"], metrics["roc_auc"],
+        )):
+            raise FloatingPointError(f"Non-finite evaluation metrics: {metrics}")
 
         # 混淆矩阵
         try:
@@ -252,12 +312,12 @@ class AttentionTrainer:
             pass
 
         # 被试级评估（如果有被试信息）
-        if len(all_subjects) > 0:
+        if len(all_subjects) > 0 and len(all_trials) > 0:
             all_subjects = torch.cat(all_subjects, dim=0)
+            all_trials = torch.cat(all_trials, dim=0)
             try:
-                subj_metrics = compute_subject_level_accuracy(
-                    all_probs, all_labels, all_subjects,
-                    n_classes=self.config.model.n_classes,
+                subj_metrics = compute_subject_trial_accuracy(
+                    all_probs, all_labels, all_subjects, all_trials,
                 )
                 metrics.update(subj_metrics)
             except Exception as e:
@@ -277,7 +337,15 @@ class AttentionTrainer:
         print(f"输出目录: {self.output_dir}")
 
         for epoch in range(self.config.training.epochs):
+            self.history.setdefault("learning_rates", []).append(
+                [group["lr"] for group in self.optimizer.param_groups]
+            )
             self.current_epoch = epoch
+            freeze_encoder = epoch < self.config.training.encoder_freeze_epochs
+            self._set_encoder_trainable(not freeze_encoder)
+            if epoch == 0 or epoch == self.config.training.encoder_freeze_epochs:
+                phase = "冻结 encoder，仅训练 IILP 分类头" if freeze_encoder else "解冻 encoder，判别学习率微调"
+                print(f"微调阶段: {phase}")
 
             # 训练
             train_metrics = self.train_epoch()
@@ -329,6 +397,8 @@ class AttentionTrainer:
 
             if is_best:
                 self.patience_counter = 0
+                self.best_epoch = epoch + 1
+                self.best_val_metrics = dict(val_metrics)
                 # 保存最佳模型
                 if self.config.output.save_best_model:
                     torch.save(
@@ -355,6 +425,8 @@ class AttentionTrainer:
                   f"BalAcc={test_metrics['balanced_accuracy']:.4f}, "
                   f"F1={test_metrics['macro_f1']:.4f}")
 
+        train_checkpoint_metrics = self.evaluate(self.train_loader)
+
         # 保存训练历史
         with open(self.output_dir / "history.json", "w") as f:
             json.dump(self.history, f, indent=2)
@@ -362,7 +434,10 @@ class AttentionTrainer:
         # 保存最终结果
         results = {
             "best_val_loss": self.best_val_loss,
-            "best_epoch": self.current_epoch + 1 - self.patience_counter,
+            "best_val_metric": self.best_val_metric,
+            "best_epoch": self.best_epoch,
+            "best_val_metrics": self.best_val_metrics,
+            "best_checkpoint_train_metrics": train_checkpoint_metrics,
             "final_val_metrics": val_metrics,
             "test_metrics": test_metrics,
             "model_info": getattr(self.model, "get_model_info", lambda: {})(),
@@ -379,6 +454,7 @@ class AttentionTrainer:
         Returns:
             多种子汇总结果
         """
+        raise RuntimeError("Use scripts/train.py --multi-seed for isolated fresh runs")
         all_results = []
         seeds = self.config.training.seeds
 
@@ -405,6 +481,9 @@ class AttentionTrainer:
             # 重置训练状态
             self.current_epoch = 0
             self.best_val_loss = float("inf")
+            self.best_val_metric = -float("inf")
+            self.best_epoch = 0
+            self.best_val_metrics = None
             self.patience_counter = 0
             self.history = {k: [] for k in self.history}
 
@@ -439,22 +518,21 @@ class AttentionTrainer:
             "per_seed": [],
         }
 
-        # 收集每个种子的测试指标
+        # Collect validation metrics because test evaluation is optional.
         metric_keys = ["accuracy", "balanced_accuracy", "macro_f1", "roc_auc"]
         metric_values = {k: [] for k in metric_keys}
 
         for i, result in enumerate(all_results):
             seed_info = {"seed": seeds[i]}
-            if result.get("test_metrics"):
-                for k in metric_keys:
-                    if k in result["test_metrics"]:
-                        val = result["test_metrics"][k]
-                        seed_info[k] = val
-                        metric_values[k].append(val)
-                # 被试级指标
-                for k in result["test_metrics"]:
-                    if "subject" in k.lower() or "subject_level" in k.lower():
-                        seed_info[k] = result["test_metrics"][k]
+            metrics = result.get("best_val_metrics") or result.get("final_val_metrics") or {}
+            for k in metric_keys:
+                if k in metrics:
+                    val = metrics[k]
+                    seed_info[k] = val
+                    metric_values[k].append(val)
+            for k in metrics:
+                if "subject" in k.lower() or "trial" in k.lower():
+                    seed_info[k] = metrics[k]
             summary["per_seed"].append(seed_info)
 
         # 计算均值和标准差

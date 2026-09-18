@@ -112,7 +112,9 @@ class TestBayesianOptimization:
     def test_init_default(self):
         """测试默认初始化"""
         search_space = {"lr": [1e-4, 1e-2, "float"]}
-        opt = BayesianOptimization(search_space, n_trials=20, n_initial=5)
+        opt = BayesianOptimization(
+            search_space, n_trials=20, n_initial=5, objective_metric="acc"
+        )
         assert opt.n_trials == 20
         assert opt.n_initial == 5
         assert opt.acquisition == "ei"
@@ -120,7 +122,9 @@ class TestBayesianOptimization:
     def test_initial_phase_random(self):
         """测试初始阶段随机采样"""
         search_space = {"lr": [1e-4, 1e-2, "float"]}
-        opt = BayesianOptimization(search_space, n_trials=20, n_initial=5)
+        opt = BayesianOptimization(
+            search_space, n_trials=20, n_initial=5, objective_metric="acc"
+        )
         for i in range(5):
             params = opt.get_next_params()
             opt.record_result(params, {"acc": np.random.rand()})
@@ -130,7 +134,7 @@ class TestBayesianOptimization:
     def test_encode_decode_roundtrip(self):
         """测试编码解码往返"""
         search_space = {"lr": [1e-4, 1e-2, "float"], "bs": [16, 64, "int"]}
-        opt = BayesianOptimization(search_space, n_trials=10)
+        opt = BayesianOptimization(search_space, n_trials=10, objective_metric="acc")
         params = {"lr": 0.005, "bs": 32}
         x = opt._encode_params(params)
         decoded = opt._decode_sample(x)
@@ -149,7 +153,7 @@ class TestBayesianOptimization:
     def test_get_summary(self):
         """测试获取汇总"""
         search_space = {"lr": [1e-4, 1e-2, "float"]}
-        opt = BayesianOptimization(search_space, n_trials=10)
+        opt = BayesianOptimization(search_space, n_trials=10, objective_metric="acc")
         for i in range(3):
             params = opt.get_next_params()
             opt.record_result(params, {"acc": np.random.rand()})

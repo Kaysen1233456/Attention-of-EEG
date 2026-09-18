@@ -6,6 +6,7 @@ from .metrics import (
     compute_roc_auc,
     compute_confusion_matrix,
     compute_subject_level_accuracy,
+    compute_subject_trial_accuracy,
     evaluate_model,
 )
 
@@ -16,5 +17,6 @@ __all__ = [
     "compute_roc_auc",
     "compute_confusion_matrix",
     "compute_subject_level_accuracy",
+    "compute_subject_trial_accuracy",
     "evaluate_model",
 ]

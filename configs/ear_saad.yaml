@@ -44,6 +44,7 @@ data:
   right_channel_indices: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]  # 右耳10通道
   normalize: true
   normalization_mode: train_subjects_only
+  normalize_clip_std: 8.0
   # Ear-SAAD预处理数据已经过1-9Hz带通，不需要再滤波
   bandpass_low: null
   bandpass_high: null
@@ -66,7 +67,7 @@ model:
   fusion_use_product: true    # 左耳*右耳 特征
   # 分类头
   n_classes: 2  # Ear-SAAD是二分类：注意左说话人 / 注意右说话人
-  dropout: 0.0
+  dropout: 0.1
   activation: silu
   # 3D电极嵌入
   use_3d_embedding: true
@@ -91,12 +92,15 @@ aamp:
 training:
   epochs: 100
   batch_size: 32
-  learning_rate: 0.001883  # 从AAD Gen2.0迁移的最优lr
-  weight_decay: 1.0e-5
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  learning_rate: 0.0003
+  weight_decay: 1.0e-4
   optimizer: adamw
   grad_clip_max_norm: 5.0
-  early_stopping_patience: 5
-  early_stopping_metric: val_loss
+  early_stopping_patience: 12
+  early_stopping_metric: val_balanced_accuracy
   seeds: [42, 43, 44]
   use_amp: true
   label_smoothing: 0.0
@@ -114,6 +118,14 @@ search:
   bayesian_kernel: matern
   objective_metric: balanced_accuracy
   search_epochs: 30
+  search_space:
+    learning_rate: [1.0e-5, 3.0e-3, float]
+    batch_size: [32, 256, int]
+    d_model: [24, 48, 72, 96]
+    branch_conv1_out: [16, 64, int]
+    branch_conv2_out: [32, 128, int]
+    fusion_hidden: [32, 160, int]
+    dropout: [0.0, 0.4, float]
 
 output:
   output_dir: artifacts/ear_saad_baseline
