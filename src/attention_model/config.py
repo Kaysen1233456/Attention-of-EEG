@@ -32,6 +32,7 @@ class DataConfig:
     right_channel_indices: List[int] = field(default_factory=lambda: [2, 3])
     normalize: bool = True
     normalization_mode: str = "train_subjects_only"  # train_subjects_only / global
+    zero_channel_policy: str = "retain"  # retain / zero_after_normalization
     normalize_clip_std: float = 8.0
     bandpass_low: float = 0.5
     bandpass_high: float = 30.0

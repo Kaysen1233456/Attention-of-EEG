@@ -33,6 +33,7 @@ data:
   right_channel_indices: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
   normalize: true
   normalization_mode: train_subjects_only
+  zero_channel_policy: retain
   normalize_clip_std: 8.0
   bandpass_low: null
   bandpass_high: null

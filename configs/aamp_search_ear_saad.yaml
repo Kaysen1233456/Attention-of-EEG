@@ -1,0 +1,21 @@
+# AAMP 搜索协议说明；实际试验由 scripts/search_aamp_lr_bs.py 启动。
+# 搜索阶段固定 train_only，validation 只做重建损失评估，test 不暴露。
+search:
+  method: quasi_random_then_bayesian
+  quasi_random: sobol
+  quasi_trials: 8
+  bayesian_trials: 8
+  seed: 42
+  epochs_per_trial: 25
+  early_stopping_patience: 5
+  objective: best_val_loss + 0.25 * max(0, val_loss - train_loss)
+  lower_is_better: true
+  search_space:
+    learning_rate: [1.0e-5, 5.0e-4, log_float]
+    batch_size: [16, 32, 48, 64]
+
+finalization:
+  selection: recommended_params.json
+  protocol: train_val
+  checkpoint_selection: fixed_epochs
+  test_exposed_to_pretraining: false

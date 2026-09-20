@@ -9,20 +9,21 @@ AAMP 自监督预训练入口脚本（阶段二）
 """
 import sys
 import argparse
+import hashlib
+import json
+import random
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset, ConcatDataset
 import numpy as np
 
 from attention_model.config import AttentionConfig
 from attention_model.models import MiniNeurIPT
 from attention_model.data import EEGDataset, SyntheticEEGDataset
-from attention_model.training.losses import AAMPReconstructionLoss
 from attention_model.training.trainer import set_seed
 
 
@@ -38,10 +39,60 @@ def parse_args():
     parser.add_argument("--n-layers", type=int, default=4)
     parser.add_argument("--synthetic", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--unlabeled-splits",
+        choices=("train_only", "train_val", "all"),
+        default="train_val",
+        help="train_only=搜索阶段；train_val=正式开发预训练；all=包含test的transductive协议",
+    )
+    parser.add_argument("--num-workers", type=int, default=None)
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
+    parser.add_argument("--patience", type=int, default=10)
+    parser.add_argument(
+        "--checkpoint-selection",
+        choices=("fixed_epochs", "validation"),
+        default="fixed_epochs",
+        help="train_val/all 默认固定epoch；validation仅用于独立train/val实验",
+    )
     return parser.parse_args()
 
 
-def pretrain_one_epoch(model, loader, optimizer, criterion, device, scaler, use_amp):
+class UnlabeledWaveformDataset(Dataset):
+    """Drop labels explicitly so the pretraining loop cannot consume them."""
+
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        item = self.dataset[index]
+        return {"waveform": item["waveform"], "index": index}
+
+
+def _stable_mask_evaluation(model, loader, device, use_amp, seed):
+    """Evaluate with a fixed mask stream without changing training RNG state."""
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    torch_state = torch.get_rng_state()
+    cuda_state = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+    try:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+        return evaluate_pretrain(model, loader, device, use_amp)
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        torch.set_rng_state(torch_state)
+        if cuda_state is not None:
+            torch.cuda.set_rng_state_all(cuda_state)
+
+
+def pretrain_one_epoch(model, loader, optimizer, device, scaler, use_amp):
     """预训练一个 epoch"""
     model.train()
     total_loss = 0.0
@@ -69,7 +120,7 @@ def pretrain_one_epoch(model, loader, optimizer, criterion, device, scaler, use_
 
 
 @torch.no_grad()
-def evaluate_pretrain(model, loader, criterion, device, use_amp):
+def evaluate_pretrain(model, loader, device, use_amp):
     """评估预训练（重建损失）"""
     model.eval()
     total_loss = 0.0
@@ -99,6 +150,8 @@ def main():
         config.training.learning_rate = args.lr
         config.model.d_model = args.d_model
         config.model.pretrained_n_layers = args.n_layers
+        if args.num_workers is not None:
+            config.training.num_workers = args.num_workers
     else:
         config = AttentionConfig()
         config.data.data_dir = args.data or "data/processed"
@@ -108,15 +161,20 @@ def main():
         config.training.learning_rate = args.lr
         config.model.d_model = args.d_model
         config.model.pretrained_n_layers = args.n_layers
+        if args.num_workers is not None:
+            config.training.num_workers = args.num_workers
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("请求了 --device cuda，但当前 PyTorch 没有可用 CUDA")
+    device_name = "cuda" if args.device == "auto" and torch.cuda.is_available() else args.device
+    if device_name == "auto":
+        device_name = "cpu"
+    device = torch.device(device_name)
     print(f"设备: {device}")
 
     # 输出目录
     output_dir = Path(config.output.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    config.save_yaml(output_dir / "pretrain_config.yaml")
-
     n_heads = config.model.pretrained_n_heads
     if config.model.d_model % n_heads != 0:
         n_heads = 3 if config.model.d_model % 3 == 0 else 1
@@ -143,7 +201,7 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     print(f"迷你版 NeurIPT 参数量: {n_params:,}")
 
-    # 数据
+    # 数据：默认只使用 train+val；all 明确表示 transductive test exposure。
     if args.synthetic:
         train_ds = SyntheticEEGDataset(
             n_samples=2000,
@@ -162,10 +220,36 @@ def main():
         dataset = EEGDataset(
             config.data.data_dir,
             normalize=config.data.normalize,
+            use_train_stats=True,
             clip_std=config.data.normalize_clip_std,
+            include_test=args.unlabeled_splits == "all",
+            zero_channel_policy=config.data.zero_channel_policy,
         )
-        train_ds = dataset.train_dataset
-        val_ds = dataset.val_dataset
+        train_ds = UnlabeledWaveformDataset(dataset.train_dataset)
+        val_ds = UnlabeledWaveformDataset(dataset.val_dataset)
+        if args.unlabeled_splits == "all":
+            train_ds = ConcatDataset([
+                train_ds,
+                UnlabeledWaveformDataset(dataset.val_dataset),
+                UnlabeledWaveformDataset(dataset.test_dataset),
+            ])
+            protocol_name = "transductive_all_unlabeled"
+        elif args.unlabeled_splits == "train_val":
+            train_ds = ConcatDataset([train_ds, UnlabeledWaveformDataset(dataset.val_dataset)])
+            protocol_name = "development_train_val_unlabeled"
+        else:
+            protocol_name = "development_train_only_unlabeled"
+
+        # Validation is kept on the original validation subjects for checkpoint selection.
+        # For the transductive protocol this is diagnostic only because validation data
+        # also appears in the unlabeled training pool.
+        val_ds = UnlabeledWaveformDataset(dataset.val_dataset)
+
+    if args.synthetic:
+        protocol_name = "synthetic"
+
+    if len(train_ds) == 0 or len(val_ds) == 0:
+        raise ValueError("AAMP 预训练的 train 或 validation 数据为空")
 
     train_loader = DataLoader(
         train_ds,
@@ -190,30 +274,88 @@ def main():
         lr=config.training.learning_rate,
         weight_decay=config.training.weight_decay,
     )
-    criterion = AAMPReconstructionLoss(loss_type="l1")
     scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
     use_amp = device.type == "cuda"
 
+    config.save_yaml(output_dir / "pretrain_config.yaml")
+    metadata = {
+        "protocol": protocol_name,
+        "unlabeled_splits": args.unlabeled_splits if not args.synthetic else "synthetic",
+        "test_exposed_to_pretraining": bool(
+            not args.synthetic and args.unlabeled_splits == "all"
+        ),
+        "validation_is_used_for_checkpoint_selection": (
+            args.checkpoint_selection == "validation"
+        ),
+        "checkpoint_selection": args.checkpoint_selection,
+        "data_dir": str(config.data.data_dir),
+        "normalization": {
+            "enabled": bool(config.data.normalize),
+            "mode": "train_subjects_only",
+            "clip_std": config.data.normalize_clip_std,
+            "zero_channel_policy": config.data.zero_channel_policy,
+        },
+        "seed": args.seed,
+        "device": str(device),
+        "n_train_unlabeled": len(train_ds),
+        "n_val_unlabeled": len(val_ds),
+        "model": model.get_model_info(),
+        "aamp": {
+            "mask_ratio_range": config.aamp.mask_ratio_range,
+            "mask_token_ratio": config.aamp.mask_token_ratio,
+            "random_token_ratio": config.aamp.random_token_ratio,
+            "unchanged_ratio": config.aamp.unchanged_ratio,
+            "percentile_low": config.aamp.percentile_low,
+            "percentile_high": config.aamp.percentile_high,
+            "amplitude_type": config.aamp.amplitude_type,
+            "validation_mask_seed": args.seed + 100000,
+        },
+    }
+    if not args.synthetic:
+        metadata["subjects"] = {
+            "train": sorted(np.unique(dataset.train_subjects).tolist()),
+            "val": sorted(np.unique(dataset.val_subjects).tolist()),
+            "test": (
+                sorted(np.unique(dataset.test_subjects).tolist())
+                if hasattr(dataset, "test_subjects") and dataset.test_subjects is not None
+                else []
+            ),
+        }
+    with open(output_dir / "pretrain_metadata.json", "w", encoding="utf-8") as file:
+        json.dump(metadata, file, indent=2, ensure_ascii=False)
+
     # 训练循环
     best_val_loss = float("inf")
-    patience = 10
+    patience = args.patience
     patience_counter = 0
+    history = []
 
     print(f"\n开始 AAMP 预训练，共 {config.training.epochs} 轮")
     print("=" * 60)
 
     for epoch in range(config.training.epochs):
-        train_loss = pretrain_one_epoch(model, train_loader, optimizer, criterion, device, scaler, use_amp)
-        val_loss = evaluate_pretrain(model, val_loader, criterion, device, use_amp)
+        train_loss = pretrain_one_epoch(
+            model, train_loader, optimizer, device, scaler, use_amp
+        )
+        val_loss = _stable_mask_evaluation(
+            model, val_loader, device, use_amp, seed=args.seed + 100000
+        )
 
         print(f"Epoch {epoch+1}/{config.training.epochs} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+        history.append({
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+        })
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
-            torch.save(model.state_dict(), output_dir / "best_pretrain_model.pt")
-            print(f"  保存最佳模型，Val Loss: {best_val_loss:.4f}")
-        else:
+            torch.save(model.state_dict(), output_dir / "diagnostic_best_pretrain_model.pt")
+            if args.checkpoint_selection == "validation":
+                torch.save(model.state_dict(), output_dir / "best_pretrain_model.pt")
+            print(f"  记录最低诊断 Val Loss: {best_val_loss:.4f}")
+        elif args.checkpoint_selection == "validation":
             patience_counter += 1
             if patience_counter >= patience:
                 print(f"早停触发，连续 {patience} 轮无改善")
@@ -221,6 +363,15 @@ def main():
 
     # 保存最终模型
     torch.save(model.state_dict(), output_dir / "final_pretrain_model.pt")
+    with open(output_dir / "pretrain_history.json", "w", encoding="utf-8") as file:
+        json.dump(history, file, indent=2)
+    for checkpoint_name in ("best_pretrain_model.pt", "final_pretrain_model.pt"):
+        checkpoint_path = output_dir / checkpoint_name
+        if checkpoint_path.exists():
+            digest = hashlib.sha256(checkpoint_path.read_bytes()).hexdigest()
+            metadata.setdefault("checkpoint_sha256", {})[checkpoint_name] = digest
+    with open(output_dir / "pretrain_metadata.json", "w", encoding="utf-8") as file:
+        json.dump(metadata, file, indent=2, ensure_ascii=False)
     print(f"\n预训练完成！最佳 Val Loss: {best_val_loss:.4f}")
     print(f"模型保存在: {output_dir}")
 

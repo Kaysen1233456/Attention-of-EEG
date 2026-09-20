@@ -220,6 +220,9 @@ python scripts/train.py \
 添加 `--evaluate-test`。当前测试被试属于 exposed holdout，历史测试结果
 不能当作全新的盲测结果。
 
+B0/B1 三折三 seed 的固定执行协议、完整训练命令、结果目录和教师保留判定，
+统一见 `STAGE1_FIXED_PROTOCOL.md`。该协议不会自动启动训练。
+
 ## 消融和搜索
 
 按 B0-B5 顺序运行，保持相同 seed、折、预算、精度和归一化策略。不要在

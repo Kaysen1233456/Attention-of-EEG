@@ -1,0 +1,63 @@
+project_name: EEG-Attention-Decoding
+experiment_name: aamp_ear_saad_development_unlabeled
+random_seed: 42
+
+data:
+  data_dir: data/processed/ear_saad
+  sampling_rate: 20
+  window_seconds: 5.0
+  window_samples: 100
+  n_channels: 19
+  channel_names: [L01, L02, L03, L04, L05, L06, L07, L08, L09, R01, R02, R03, R04, R05, R06, R07, R08, R09, R10]
+  channel_positions:
+    - [-0.9, 0.8, 0.7]
+    - [-1.0, 0.9, 0.2]
+    - [-0.9, 0.8, -0.3]
+    - [-0.7, 0.5, -0.8]
+    - [-0.8, -0.3, -0.7]
+    - [-1.0, -0.7, -0.2]
+    - [-0.9, -0.6, 0.4]
+    - [-0.7, -0.2, 0.8]
+    - [-0.5, 0.5, 0.9]
+    - [0.9, 0.8, 0.7]
+    - [1.0, 0.9, 0.2]
+    - [0.9, 0.8, -0.3]
+    - [0.7, 0.5, -0.8]
+    - [0.8, -0.3, -0.7]
+    - [1.0, -0.7, -0.2]
+    - [0.9, -0.6, 0.4]
+    - [0.7, -0.2, 0.8]
+    - [0.5, 0.5, 0.9]
+    - [1.1, 0.0, 0.0]
+  normalize: true
+  normalization_mode: train_subjects_only
+  zero_channel_policy: retain
+  normalize_clip_std: 8.0
+
+model:
+  architecture: mini_neuript
+  d_model: 96
+  dropout: 0.15
+  temporal_pool: 4
+  pretrained_n_heads: 8
+  pretrained_n_layers: 4
+  pretrained_d_ff: 384
+
+aamp:
+  use_aamp: true
+  mask_ratio_range: [0.2, 0.35, 0.5]
+  mask_token_ratio: 0.8
+  random_token_ratio: 0.1
+  unchanged_ratio: 0.1
+  percentile_low: 0.0
+  percentile_high: 1.0
+  amplitude_type: abs
+
+training:
+  epochs: 100
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  learning_rate: 0.0001
+  weight_decay: 0.0001

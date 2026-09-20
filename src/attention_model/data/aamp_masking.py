@@ -88,73 +88,45 @@ class AAMPMasking:
         device = x.device
         dtype = x.dtype
 
-        # 随机选择本次的掩码比例
-        mask_ratio = np.random.choice(self.mask_ratio_range)
+        # 保持 AAMP 的幅值排序逻辑，但整个过程在输入设备上向量化执行。
+        mask_ratio = float(np.random.choice(self.mask_ratio_range))
         n_mask = int(time * mask_ratio)
+        if n_mask <= 0:
+            return x.clone(), torch.zeros_like(x, dtype=torch.bool)
 
-        # 初始化掩码标记
+        amplitudes = x.abs() if self.amplitude_type == "abs" else x
+        sorted_indices = torch.argsort(amplitudes, dim=-1, descending=True)
+
+        percentile = torch.empty(
+            batch, n_channels, device=device, dtype=torch.float32
+        ).uniform_(self.percentile_low, self.percentile_high)
+        center_rank = (percentile * time).long()
+        start_rank = (center_rank - n_mask // 2).clamp(min=0, max=time - n_mask)
+        rank_axis = torch.arange(time, device=device).view(1, 1, time)
+        sorted_rank_mask = (rank_axis >= start_rank.unsqueeze(-1)) & (
+            rank_axis < (start_rank + n_mask).unsqueeze(-1)
+        )
+
         mask = torch.zeros(batch, n_channels, time, dtype=torch.bool, device=device)
+        mask.scatter_(dim=-1, index=sorted_indices, src=sorted_rank_mask)
 
-        # 对每个 batch、每个通道单独做 AAMP
-        for b in range(batch):
-            for c in range(n_channels):
-                signal = x[b, c].cpu().numpy()
-
-                # 步骤1：按振幅从大到小排序
-                if self.amplitude_type == "abs":
-                    amplitudes = np.abs(signal)  # 绝对值（EEG交流信号推荐）
-                else:
-                    amplitudes = signal  # 原始值（严格复现论文）
-                sorted_indices = np.argsort(amplitudes)[::-1]  # 降序排列的索引
-
-                # 步骤2：随机采样百分位点 c ~ U(percentile_low, percentile_high)
-                percentile = np.random.uniform(self.percentile_low, self.percentile_high)
-                center_rank = int(percentile * time)
-
-                # 步骤3：以 center_rank 为中心，选择 n_mask 个点
-                start_rank = max(0, center_rank - n_mask // 2)
-                end_rank = min(time, start_rank + n_mask)
-                if end_rank - start_rank < n_mask:
-                    start_rank = max(0, end_rank - n_mask)
-
-                # 这些是排序后的位置，需要转回原始时间索引
-                masked_sorted_ranks = np.arange(start_rank, end_rank)
-                masked_time_indices = sorted_indices[masked_sorted_ranks]
-
-                mask[b, c, masked_time_indices] = True
-
-        # 步骤4：BERT 式 80/10/10 掩码策略
+        # BERT 式 80/10/10 替换，同样完全向量化。
         masked_x = x.clone()
-
-        # 对每个被掩码的点，决定是 [mask]、随机、还是不变
-        for b in range(batch):
-            for c in range(n_channels):
-                masked_indices = mask[b, c].nonzero(as_tuple=True)[0]
-                if len(masked_indices) == 0:
-                    continue
-
-                n = len(masked_indices)
-                # 随机打乱，然后按比例分配
-                perm = torch.randperm(n)
-                n_mask_token = int(n * self.mask_token_ratio)
-                n_random = int(n * self.random_token_ratio)
-                # 剩下的保持不变
-
-                mask_token_idx = masked_indices[perm[:n_mask_token]]
-                random_idx = masked_indices[perm[n_mask_token:n_mask_token + n_random]]
-                # unchanged_idx = masked_indices[perm[n_mask_token + n_random:]]
-
-                # 80% 替换为 [mask]
-                masked_x[b, c, mask_token_idx] = self.mask_value
-
-                # 10% 替换为随机值（从该通道的信号分布中采样）
-                if len(random_idx) > 0:
-                    signal_std = x[b, c].std().item()
-                    signal_mean = x[b, c].mean().item()
-                    random_values = torch.randn(len(random_idx), device=device, dtype=dtype) * signal_std + signal_mean
-                    masked_x[b, c, random_idx] = random_values
-
-                # 10% 保持不变（不做任何操作）
+        replacement_draw = torch.rand(batch, n_channels, time, device=device)
+        mask_token = mask & (replacement_draw < self.mask_token_ratio)
+        random_token = mask & (
+            (replacement_draw >= self.mask_token_ratio)
+            & (replacement_draw < self.mask_token_ratio + self.random_token_ratio)
+        )
+        masked_x = torch.where(
+            mask_token,
+            torch.as_tensor(self.mask_value, device=device, dtype=dtype),
+            masked_x,
+        )
+        signal_mean = x.mean(dim=-1, keepdim=True)
+        signal_std = x.std(dim=-1, keepdim=True)
+        random_values = torch.randn_like(x) * signal_std + signal_mean
+        masked_x = torch.where(random_token, random_values, masked_x)
 
         if return_details:
             details = {

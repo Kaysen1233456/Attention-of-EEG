@@ -11,6 +11,7 @@ build/
 # 数据文件（大文件，不提交到git）
 data/raw/
 data/processed/
+ds007169-download/
 *.npy
 *.npz
 *.mat

@@ -42,6 +42,7 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=None, help="batch大小")
     parser.add_argument("--epochs", type=int, default=None, help="训练轮数")
     parser.add_argument("--d-model", type=int, default=None, help="模型隐藏维度")
+    parser.add_argument("--temporal-pool", type=int, default=None, choices=[1, 2, 4])
     parser.add_argument("--num-workers", type=int, default=None, help="DataLoader工作进程数")
     parser.add_argument("--seeds", type=int, nargs="+", default=None, help="随机种子列表")
     parser.add_argument("--multi-seed", action="store_true", help="多种子训练")
@@ -199,6 +200,7 @@ def main():
                 ("--batch-size", args.batch_size),
                 ("--epochs", args.epochs),
                 ("--d-model", args.d_model),
+                ("--temporal-pool", args.temporal_pool),
                 ("--num-workers", args.num_workers),
                 ("--device", args.device),
                 ("--pretrained-path", args.pretrained_path),
@@ -215,6 +217,8 @@ def main():
             rows.append({
                 "seed": seed,
                 "metrics": result["best_val_metrics"],
+                "train_metrics": result.get("best_checkpoint_train_metrics"),
+                "train_validation_gap": result.get("train_validation_gap"),
                 "best_epoch": result["best_epoch"],
                 "checkpoint": str(target / "best_model.pt"),
             })
@@ -250,6 +254,8 @@ def main():
         config.training.epochs = args.epochs
     if args.d_model:
         config.model.d_model = args.d_model
+    if args.temporal_pool:
+        config.model.temporal_pool = args.temporal_pool
     if args.num_workers is not None:
         config.training.num_workers = args.num_workers
     if args.seeds:

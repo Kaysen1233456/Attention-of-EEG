@@ -188,6 +188,52 @@ def compute_subject_trial_accuracy(
     }
 
 
+def compute_per_subject_metrics(
+    probs: torch.Tensor,
+    labels: torch.Tensor,
+    subjects: torch.Tensor,
+) -> Dict[str, Dict[str, object]]:
+    """Compute window-level metrics independently for every subject."""
+    probs_np = probs.cpu().numpy()
+    labels_np = labels.cpu().numpy()
+    subjects_np = subjects.cpu().numpy()
+    predictions = probs_np.argmax(axis=1)
+    output = {}
+
+    for subject_id in np.unique(subjects_np):
+        mask = subjects_np == subject_id
+        subject_labels = labels_np[mask]
+        subject_predictions = predictions[mask]
+        subject_probs = probs_np[mask]
+        recalls = []
+        for class_id in range(subject_probs.shape[1]):
+            class_mask = subject_labels == class_id
+            recalls.append(
+                float((subject_predictions[class_mask] == class_id).mean())
+                if class_mask.any()
+                else 0.0
+            )
+        if subject_probs.shape[1] == 2 and len(np.unique(subject_labels)) == 2:
+            subject_auc = float(roc_auc_score(subject_labels, subject_probs[:, 1]))
+        else:
+            subject_auc = None
+        output[str(int(subject_id))] = {
+            "n_samples": int(mask.sum()),
+            "balanced_accuracy": float(
+                balanced_accuracy_score(subject_labels, subject_predictions)
+            ),
+            "macro_f1": float(
+                f1_score(subject_labels, subject_predictions, average="macro", zero_division=0)
+            ),
+            "roc_auc": subject_auc,
+            "class_recalls": recalls,
+            "confusion_matrix": confusion_matrix(
+                subject_labels, subject_predictions
+            ).tolist(),
+        }
+    return output
+
+
 def evaluate_model(
     model: torch.nn.Module,
     loader: torch.utils.data.DataLoader,

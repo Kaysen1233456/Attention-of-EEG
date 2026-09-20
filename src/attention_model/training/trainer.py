@@ -33,6 +33,7 @@ from ..evaluation.metrics import (
     compute_macro_f1,
     compute_roc_auc,
     compute_confusion_matrix,
+    compute_per_subject_metrics,
     compute_subject_trial_accuracy,
 )
 from .losses import AttentionLoss
@@ -322,6 +323,12 @@ class AttentionTrainer:
                 metrics.update(subj_metrics)
             except Exception as e:
                 print(f"被试级评估失败: {e}")
+        if len(all_subjects) > 0:
+            if not isinstance(all_subjects, torch.Tensor):
+                all_subjects = torch.cat(all_subjects, dim=0)
+            metrics["per_subject"] = compute_per_subject_metrics(
+                all_probs, all_labels, all_subjects,
+            )
 
         return metrics
 
@@ -442,6 +449,11 @@ class AttentionTrainer:
             "test_metrics": test_metrics,
             "model_info": getattr(self.model, "get_model_info", lambda: {})(),
         }
+        results["train_validation_gap"] = {
+            key: train_checkpoint_metrics[key] - self.best_val_metrics[key]
+            for key in ("balanced_accuracy", "macro_f1", "roc_auc")
+            if key in train_checkpoint_metrics and key in self.best_val_metrics
+        }
         with open(self.output_dir / "results.json", "w") as f:
             json.dump(results, f, indent=2, default=str)
 
@@ -525,14 +537,20 @@ class AttentionTrainer:
         for i, result in enumerate(all_results):
             seed_info = {"seed": seeds[i]}
             metrics = result.get("best_val_metrics") or result.get("final_val_metrics") or {}
+            train_metrics = result.get("best_checkpoint_train_metrics") or {}
             for k in metric_keys:
                 if k in metrics:
                     val = metrics[k]
                     seed_info[k] = val
                     metric_values[k].append(val)
+                train_key = f"train_{k}"
+                if k in train_metrics:
+                    seed_info[train_key] = train_metrics[k]
+                    seed_info[f"gap_{k}"] = train_metrics[k] - metrics[k]
             for k in metrics:
-                if "subject" in k.lower() or "trial" in k.lower():
+                if "subject" in k.lower() or "trial" in k.lower() or k == "per_subject":
                     seed_info[k] = metrics[k]
+            seed_info["best_epoch"] = result.get("best_epoch")
             summary["per_seed"].append(seed_info)
 
         # 计算均值和标准差
