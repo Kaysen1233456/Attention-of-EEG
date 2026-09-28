@@ -2,6 +2,7 @@
 import argparse
 import copy
 import json
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -50,9 +51,11 @@ def main():
     parser.add_argument("--data", default="data/processed/mental_arithmetic_250hz_8ch")
     parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", default="artifacts/gen5_final")
     args = parser.parse_args()
-    torch.manual_seed(42)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
     root = Path(args.data)
     train_x, train_y = load_split(root, "train")
     val_x, val_y = load_split(root, "val")
@@ -86,6 +89,8 @@ def main():
         "protocol": "fixed Gen5; train+val fit; one final test evaluation",
         "epochs": args.epochs,
         "batch_size": args.batch_size,
+        "seed": args.seed,
+        "test_labels_sha256": hashlib.sha256(test_y.tobytes()).hexdigest(),
         "normalization": "window_local_zscore_clip_8",
         "model": "Gen5 temporal CNN + relative spectral power",
         "test_metrics": metrics(test_labels, test_prob),
