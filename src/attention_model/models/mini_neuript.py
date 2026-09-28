@@ -596,7 +596,22 @@ class MiniNeurIPTClassifier(nn.Module):
         )
         if pretrained_path is not None:
             state = torch.load(pretrained_path, map_location="cpu")
-            self.encoder.load_state_dict(state, strict=True)
+            # Pretraining and classification use different decoder heads. The
+            # encoder is transferable, while decoder parameters must be
+            # ignored when their shapes do not match.
+            encoder_state = self.encoder.state_dict()
+            transferable = {
+                key: value
+                for key, value in state.items()
+                if key in encoder_state and value.shape == encoder_state[key].shape
+            }
+            missing, unexpected = self.encoder.load_state_dict(transferable, strict=False)
+            missing = [key for key in missing if not key.startswith("decoder.")]
+            if missing:
+                raise RuntimeError(
+                    "Pretrained encoder is missing required parameters: "
+                    + ", ".join(missing)
+                )
         if freeze_encoder:
             for parameter in self.encoder.parameters():
                 parameter.requires_grad = False

@@ -1,5 +1,8 @@
 # EEG Attention Decoding
 
+Gen5 的固定模型、改动原因、交叉验证结果和最终测试协议记录在
+[GEN5_PROTOCOL.md](GEN5_PROTOCOL.md)。
+
 基于 Ear-SAAD 数据集的跨被试听觉注意解码项目。项目借鉴 NeurIPS 2025
 NeurIPT 的 3D 电极嵌入、IILP 和 PMoE 思路，但所有组件都必须通过监督式、
 被试独立的开发实验验证后才能保留。
