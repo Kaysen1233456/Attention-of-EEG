@@ -41,13 +41,60 @@ window-level balanced accuracy 不低于 0.70 且每折无类别坍缩为硬门�
 ```bash
 PYTHONPATH=src python scripts/search_aamp_lr_bs.py \
   --config configs/pretrain_aamp_ear_saad.yaml \
-  --output artifacts/aamp_lr_bs_search_v1 \
+  --output artifacts/aamp_lr_bs_search_v2 \
   --quasi-trials 8 \
   --bayes-trials 8 \
   --epochs 25 \
   --patience 5 \
   --device cuda
 ```
+
+## 当前搜索结论
+
+`artifacts/aamp_lr_bs_search_v2` 已完成完整搜索，共 16 个 trial：
+
+- 8 个 Sobol 准随机 trial；
+- 8 个 Matern GP + EI 贝叶斯优化 trial；
+- 搜索阶段使用 `train_only`，test 未暴露；
+- 当前最佳组合为 `learning_rate=0.00044348092176995735`、`batch_size=16`；
+- 最佳 trial 为 `artifacts/aamp_lr_bs_search_v2/trials/trial_015`；
+- 最佳 epoch 为 24/25；
+- `best_val_loss=0.46251571589886253`；
+- `train_loss_at_best_val=0.5047316401455533`；
+- `generalization_gap=-0.04221592424669075`；
+- `objective=0.46251571589886253`。
+
+该结果只说明当前搜索空间内的自监督重建目标最优，不能直接证明下游分类有效。
+推荐参数必须进入主协议固定 epoch 复训，再进行迁移验证。
+
+## 推荐配置正式复训
+
+使用当前最佳学习率和批大小，切换到主协议 `train_val`，固定 100 epoch：
+
+```bash
+PYTHONPATH=src python scripts/pretrain_aamp.py \
+  --config configs/pretrain_aamp_ear_saad.yaml \
+  --output artifacts/pretrain_aamp_ear_saad_search_v2_lr4p43e-4_bs16 \
+  --epochs 100 \
+  --batch-size 16 \
+  --lr 0.00044348092176995735 \
+  --unlabeled-splits train_val \
+  --checkpoint-selection fixed_epochs \
+  --device cuda
+```
+
+本轮训练完成后，以
+`artifacts/pretrain_aamp_ear_saad_search_v2_lr4p43e-4_bs16/final_pretrain_model.pt`
+作为主协议预训练权重。`best_pretrain_model.pt` 仍只作为重建诊断点，不作为独立
+验证选择结果。
+
+复训完成后检查：
+
+- `pretrain_metadata.json` 中 `test_exposed_to_pretraining=false`；
+- `unlabeled_splits=train_val`；
+- `checkpoint_selection=fixed_epochs`；
+- `pretrain_history.json` 中 train/val loss 是否稳定下降；
+- `final_pretrain_model.pt` 是否生成并记录 SHA-256。
 
 ## Transductive 对照
 

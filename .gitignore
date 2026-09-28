@@ -56,3 +56,5 @@ logs/
 .venv/
 venv/
 env/
+*.tar.gz
+最佳Val

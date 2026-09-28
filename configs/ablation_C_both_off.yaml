@@ -1,0 +1,61 @@
+data:
+  channel_names: [Fz, F3, F4, T7, T8, Pz, P3, P4]
+  channel_positions:
+  - [0.0, 1.0, 0.3]
+  - [-0.4, 0.8, 0.5]
+  - [0.4, 0.8, 0.5]
+  - [-1.0, 0.0, 0.0]
+  - [1.0, 0.0, 0.0]
+  - [0.0, -1.0, 0.3]
+  - [-0.4, -0.8, 0.5]
+  - [0.4, -0.8, 0.5]
+  data_dir: data/processed/mental_arithmetic_250hz_8ch
+  n_channels: 8
+  left_channel_indices: [0, 1, 2, 3, 4]
+  right_channel_indices: [5, 6, 7]
+  normalization_mode: train_subjects_only
+  normalize: true
+  normalize_clip_std: 8.0
+  sampling_rate: 250
+  window_samples: 500
+  zero_channel_policy: retain
+experiment_name: route_C_trial69_stage1_multiseed
+model:
+  architecture: mini_neuript_classifier
+  classifier_type: swiglu
+  d_model: 96
+  dropout: 0.39538995531473903
+  freeze_pretrained_backbone: true
+  n_classes: 2
+  pretrained_backbone_path: artifacts/pretrain_aamp_best_params_seed43/diagnostic_best_pretrain_model.pt
+  pretrained_d_ff: 384
+  pretrained_n_heads: 8
+  pretrained_n_layers: 4
+  temporal_pool: 4
+  use_difference_feature: false
+  use_iilp_pooling: true
+  use_pmoe: true
+  use_pretrained_backbone: true
+  use_product_feature: false
+project_name: EEG-Attention-Decoding
+random_seed: 42
+training:
+  batch_size: 42
+  class_weights: [1.1318916953902871, 2.550842655115906]
+  consistency_lambda: 0.0
+  early_stopping_metric: val_balanced_accuracy
+  early_stopping_patience: 5
+  encoder_freeze_epochs: 999
+  epochs: 30
+  grad_clip_max_norm: 5.0
+  label_smoothing: 0.0
+  learning_rate: 1.2326412420678248e-05
+  lr_scheduler: none
+  num_workers: 4
+  optimizer: adamw
+  persistent_workers: true
+  pin_memory: true
+  seeds: [42, 43, 44]
+  use_amp: true
+  use_consistency_loss: false
+  weight_decay: 5.293184425990864e-06

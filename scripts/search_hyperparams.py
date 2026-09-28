@@ -28,6 +28,17 @@ from attention_model.search import QuasiRandomSearch, BayesianOptimization
 from scripts.train import build_model, apply_ablation_variant
 
 
+def apply_search_params(config: AttentionConfig, params: dict) -> dict:
+    """Apply search params without mutating the original params dict."""
+    params_copy = params.copy()
+    rest_w = params_copy.pop("rest_weight", None)
+    focus_w = params_copy.pop("focus_weight", None)
+    if rest_w is not None and focus_w is not None:
+        config.training.class_weights = [rest_w, focus_w]
+    config.update_from_dict(params_copy)
+    return params_copy
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="超参数搜索")
     parser.add_argument("--method", type=str, default="quasi_random", choices=["quasi_random", "bayesian"])
@@ -57,8 +68,7 @@ def make_objective_fn(base_config, datasets, device, search_epochs, ablation=Non
         if ablation:
             apply_ablation_variant(config, ablation)
 
-        # 应用搜索到的参数
-        config.update_from_dict(params)
+        apply_search_params(config, params)
         config.training.epochs = search_epochs
         config.training.seeds = [base_config.get("seed", 42)]
         config.output.output_dir = str(Path(base_config["output_dir"]) / f"trial_{params.get('trial_idx', 'tmp')}")

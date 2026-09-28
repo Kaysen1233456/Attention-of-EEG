@@ -32,11 +32,14 @@ def parse_args():
     parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--data", type=str, default=None)
     parser.add_argument("--output", type=str, default=None)
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--d-model", type=int, default=96)
-    parser.add_argument("--n-layers", type=int, default=4)
+    parser.add_argument("--epochs", type=int, default=None)
+    parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--lr", type=float, default=None)
+    parser.add_argument("--weight-decay", type=float, default=None)
+    parser.add_argument("--dropout", type=float, default=None)
+    parser.add_argument("--d-model", type=int, default=None)
+    parser.add_argument("--n-layers", type=int, default=None)
+    parser.add_argument("--temporal-pool", type=int, default=None)
     parser.add_argument("--synthetic", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
@@ -145,22 +148,28 @@ def main():
         config = AttentionConfig.from_yaml(args.config)
         config.data.data_dir = args.data or config.data.data_dir
         config.output.output_dir = args.output or config.output.output_dir
-        config.training.epochs = args.epochs
-        config.training.batch_size = args.batch_size
-        config.training.learning_rate = args.lr
-        config.model.d_model = args.d_model
-        config.model.pretrained_n_layers = args.n_layers
+        config.training.epochs = args.epochs if args.epochs is not None else config.training.epochs
+        config.training.batch_size = args.batch_size if args.batch_size is not None else config.training.batch_size
+        config.training.learning_rate = args.lr if args.lr is not None else config.training.learning_rate
+        config.training.weight_decay = args.weight_decay if args.weight_decay is not None else config.training.weight_decay
+        config.model.dropout = args.dropout if args.dropout is not None else config.model.dropout
+        config.model.d_model = args.d_model if args.d_model is not None else config.model.d_model
+        config.model.pretrained_n_layers = args.n_layers if args.n_layers is not None else config.model.pretrained_n_layers
+        config.model.temporal_pool = args.temporal_pool if args.temporal_pool is not None else config.model.temporal_pool
         if args.num_workers is not None:
             config.training.num_workers = args.num_workers
     else:
         config = AttentionConfig()
         config.data.data_dir = args.data or "data/processed"
         config.output.output_dir = args.output or "artifacts/pretrain_aamp"
-        config.training.epochs = args.epochs
-        config.training.batch_size = args.batch_size
-        config.training.learning_rate = args.lr
-        config.model.d_model = args.d_model
-        config.model.pretrained_n_layers = args.n_layers
+        config.training.epochs = args.epochs if args.epochs is not None else config.training.epochs
+        config.training.batch_size = args.batch_size if args.batch_size is not None else config.training.batch_size
+        config.training.learning_rate = args.lr if args.lr is not None else config.training.learning_rate
+        config.training.weight_decay = args.weight_decay if args.weight_decay is not None else config.training.weight_decay
+        config.model.dropout = args.dropout if args.dropout is not None else config.model.dropout
+        config.model.d_model = args.d_model if args.d_model is not None else config.model.d_model
+        config.model.pretrained_n_layers = args.n_layers if args.n_layers is not None else config.model.pretrained_n_layers
+        config.model.temporal_pool = args.temporal_pool if args.temporal_pool is not None else config.model.temporal_pool
         if args.num_workers is not None:
             config.training.num_workers = args.num_workers
 
@@ -187,6 +196,7 @@ def main():
         n_layers=config.model.pretrained_n_layers,
         n_channels=config.data.n_channels,
         channel_positions=config.data.channel_positions,
+        max_time_steps=config.data.window_samples,
         dropout=max(config.model.dropout, 0.1),
         mask_ratio_range=config.aamp.mask_ratio_range,
         mask_token_ratio=config.aamp.mask_token_ratio,
@@ -196,6 +206,13 @@ def main():
         percentile_high=config.aamp.percentile_high,
         amplitude_type=config.aamp.amplitude_type,
         temporal_pool=config.model.temporal_pool,
+        pretrain_masking=config.pretraining.masking,
+        sampling_rate=config.data.sampling_rate,
+        frequency_bands={
+            name: tuple(bounds)
+            for name, bounds in config.pretraining.bands.items()
+        } or None,
+        mask_bands=config.pretraining.mask_bands,
     )
     model = model.to(device)
     n_params = sum(p.numel() for p in model.parameters())
@@ -310,6 +327,13 @@ def main():
             "amplitude_type": config.aamp.amplitude_type,
             "validation_mask_seed": args.seed + 100000,
         },
+        "pretraining": {
+            "masking": config.pretraining.masking,
+            "sampling_rate": config.data.sampling_rate,
+            "bands": config.pretraining.bands,
+            "mask_bands": config.pretraining.mask_bands,
+            "loss_domain": "complex_rfft_magnitude_error_on_masked_bins",
+        },
     }
     if not args.synthetic:
         metadata["subjects"] = {
@@ -330,7 +354,7 @@ def main():
     patience_counter = 0
     history = []
 
-    print(f"\n开始 AAMP 预训练，共 {config.training.epochs} 轮")
+    print(f"\n开始 {config.pretraining.masking} 频域预训练，共 {config.training.epochs} 轮")
     print("=" * 60)
 
     for epoch in range(config.training.epochs):

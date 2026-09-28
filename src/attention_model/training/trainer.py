@@ -85,11 +85,18 @@ class AttentionTrainer:
         self.model = self.model.to(self.device)
 
         # 损失函数
+        # 类别权重（用于类别不平衡）
+        class_weights = None
+        if hasattr(config.training, 'class_weights') and config.training.class_weights is not None:
+            class_weights = torch.tensor(config.training.class_weights, dtype=torch.float32)
+            print(f"使用类别权重: {config.training.class_weights}")
+
         self.criterion = AttentionLoss(
             n_classes=config.model.n_classes,
             label_smoothing=config.training.label_smoothing,
             use_consistency=config.training.use_consistency_loss,
             consistency_lambda=config.training.consistency_lambda,
+            class_weights=class_weights,
         )
 
         self._set_encoder_trainable(config.training.encoder_freeze_epochs == 0)

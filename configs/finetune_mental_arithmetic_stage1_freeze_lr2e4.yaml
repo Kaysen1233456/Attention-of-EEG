@@ -1,0 +1,88 @@
+project_name: EEG-Attention-Decoding
+experiment_name: finetune_mental_arithmetic_stage1_freeze_pretrain_v1_lr2e4
+random_seed: 42
+data:
+  data_dir: data/processed/mental_arithmetic_250hz_8ch
+  sampling_rate: 250
+  window_samples: 500
+  n_channels: 8
+  channel_names:
+  - Fz
+  - F3
+  - F4
+  - T7
+  - T8
+  - Pz
+  - P3
+  - P4
+  channel_positions:
+  - - 0.0
+    - 1.0
+    - 0.3
+  - - -0.4
+    - 0.8
+    - 0.5
+  - - 0.4
+    - 0.8
+    - 0.5
+  - - -1.0
+    - 0.0
+    - 0.0
+  - - 1.0
+    - 0.0
+    - 0.0
+  - - 0.0
+    - -1.0
+    - 0.3
+  - - -0.4
+    - -0.8
+    - 0.5
+  - - 0.4
+    - -0.8
+    - 0.5
+  normalize: true
+  normalization_mode: train_subjects_only
+  zero_channel_policy: retain
+  normalize_clip_std: 8.0
+model:
+  architecture: mini_neuript_classifier
+  d_model: 96
+  n_classes: 2
+  dropout: 0.15
+  temporal_pool: 4
+  pretrained_n_heads: 8
+  pretrained_n_layers: 4
+  pretrained_d_ff: 384
+  use_pretrained_backbone: true
+  pretrained_backbone_path: artifacts/pretrain_aamp_mental_arithmetic_250hz_8ch/diagnostic_best_pretrain_model.pt
+  freeze_pretrained_backbone: true
+  use_iilp_pooling: true
+  use_pmoe: true
+  classifier_type: swiglu
+  use_difference_feature: true
+  use_product_feature: true
+training:
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.0002
+  weight_decay: 1.0e-05
+  optimizer: adamw
+  grad_clip_max_norm: 5.0
+  early_stopping_patience: 5
+  early_stopping_metric: val_balanced_accuracy
+  class_weights:
+  - 0.674
+  - 1.9366
+  seeds:
+  - 42
+  - 43
+  - 44
+  use_amp: true
+  label_smoothing: 0.0
+  use_consistency_loss: false
+  consistency_lambda: 0.0
+  encoder_freeze_epochs: 10
+  lr_scheduler: none
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true

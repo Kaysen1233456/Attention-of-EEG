@@ -69,6 +69,10 @@ class AttentionLoss(nn.Module):
             字典，包含 loss 和各分项损失
         """
         # 主损失：交叉熵
+        # 确保ce_loss的weight和logits在同一个设备
+        if self.ce_loss.weight is not None and self.ce_loss.weight.device != logits.device:
+            self.ce_loss = self.ce_loss.to(logits.device)
+
         ce = self.ce_loss(logits, labels)
 
         total_loss = ce

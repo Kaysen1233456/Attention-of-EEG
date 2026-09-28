@@ -81,17 +81,17 @@ class BayesianOptimization:
         x = np.zeros(self.n_params)
         for i, name in enumerate(self.param_names):
             spec = self.search_space[name]
-            if len(spec) == 4 and all(not isinstance(v, str) for v in spec):
+            if len(spec) != 3 or not isinstance(spec[2], str):
                 value = params[name]
                 distances = np.abs(np.asarray(spec, dtype=float) - float(value))
-                x[i] = 0.0 if distances.max() == 0 else float(distances.argmin()) / (len(spec) - 1)
+                x[i] = 0.0 if len(spec) == 1 else float(distances.argmin()) / (len(spec) - 1)
                 continue
             low, high, param_type = spec
             value = params[name]
             if param_type == "log_float":
                 x[i] = (math.log(value) - math.log(low)) / (math.log(high) - math.log(low))
             else:
-                x[i] = (value - low) / (high - low)
+                x[i] = 0.0 if high == low else (value - low) / (high - low)
         return np.clip(x, 0.0, 1.0)
 
     def _decode_sample(self, sample: np.ndarray) -> Dict[str, Any]:
@@ -99,14 +99,15 @@ class BayesianOptimization:
         params = {}
         for i, name in enumerate(self.param_names):
             spec = self.search_space[name]
-            if len(spec) == 4 and all(not isinstance(v, str) for v in spec):
-                params[name] = spec[min(int(sample[i] * len(spec)), len(spec) - 1)]
+            if len(spec) != 3 or not isinstance(spec[2], str):
+                index = min(int(round(sample[i] * (len(spec) - 1))), len(spec) - 1)
+                params[name] = spec[index]
                 continue
             low, high, param_type = spec
             if param_type == "log_float":
                 value = math.exp(math.log(low) + sample[i] * (math.log(high) - math.log(low)))
             else:
-                value = low + sample[i] * (high - low)
+                value = low if high == low else low + sample[i] * (high - low)
             if param_type == "int":
                 value = int(round(value))
                 value = max(low, min(high, value))

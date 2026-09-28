@@ -9,6 +9,8 @@ import torch
 import numpy as np
 import pytest
 from attention_model.data.aamp_masking import AAMPMasking, compare_random_vs_aamp
+from attention_model.data.freq_masking import FrequencyMasking
+from attention_model.models.mini_neuript import MiniNeurIPT
 
 
 class TestAAMPMasking:
@@ -110,6 +112,36 @@ class TestCompareRandomVsAAMP:
         _, random_mask, _, aamp_mask = compare_random_vs_aamp(x, mask_ratio=0.5)
         assert random_mask.sum() > 0
         assert aamp_mask.sum() > 0
+
+
+class TestFrequencyMasking:
+    def test_masks_configured_alpha_bins_in_spectrum(self):
+        x = torch.randn(2, 8, 500)
+        masker = FrequencyMasking(sfreq=250, n_time=500, mask_bands=["alpha"])
+        masked_spectrum, mask, details = masker(x, return_details=True)
+
+        freqs = torch.fft.rfftfreq(500, d=1 / 250)
+        expected = (freqs >= 8) & (freqs < 13)
+        assert masked_spectrum.shape == (2, 8, 251)
+        assert torch.equal(mask, expected)
+        assert torch.count_nonzero(masked_spectrum[..., mask]) == 0
+        assert details["masked_bands"] == ["alpha"]
+
+    def test_frequency_pretraining_outputs_spectral_loss_and_gradients(self):
+        model = MiniNeurIPT(
+            d_model=24, n_heads=3, d_ff=48, n_layers=1, n_channels=2,
+            channel_positions=[[0, 1, 0], [0, -1, 0]], temporal_pool=1,
+            max_time_steps=64,
+            use_pmoe=False, pretrain_masking="frequency", mask_bands=["alpha"],
+        )
+        x = torch.randn(2, 2, 64)
+        output = model(x, apply_mask=True)
+        assert output["reconstruction"].shape == (2, 2, 33)
+        assert output["mask"].shape == (33,)
+        assert output["mask"].any()
+        assert output["loss"].ndim == 0 and torch.isfinite(output["loss"])
+        output["loss"].backward()
+        assert model.decoder[-1].weight.grad is not None
 
 
 if __name__ == "__main__":

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EEG专注度项目演示</title>
+<style>
+:root { --ink:#17202a; --muted:#667085; --line:#d9dee7; --paper:#f5f7fa; --panel:#fff;
+  --teal:#0f766e; --orange:#f97316; --blue:#2563eb; --red:#dc2626; --green:#166534;
+  --yellow:#92400e; --gray:#475467; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; }
+main { max-width:1240px; margin:0 auto; padding:32px 22px 64px; }
+h1,h2,h3 { margin:0 0 10px; line-height:1.2; }
+h1 { font-size:30px; letter-spacing:0; }
+h2 { font-size:20px; }
+h3 { font-size:16px; }
+p { margin:6px 0; color:var(--muted); }
+.eyebrow { color:var(--teal); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+.hero { display:flex; justify-content:space-between; gap:24px; align-items:flex-end; padding-bottom:26px; border-bottom:1px solid var(--line); }
+.hero-copy { max-width:760px; }
+.route { color:var(--ink); font-weight:600; margin-top:14px; }
+.badge { border:1px solid #f3c98b; background:#fff8eb; color:var(--yellow); border-radius:6px; padding:10px 12px; font-weight:700; white-space:nowrap; }
+.section { margin-top:28px; }
+.grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:16px; }
+.metric { font-size:24px; font-weight:750; margin-top:4px; }
+.metric-label { color:var(--muted); font-size:12px; }
+.target { color:var(--muted); font-size:12px; margin-top:8px; }
+.table-wrap { overflow-x:auto; background:var(--panel); border:1px solid var(--line); border-radius:7px; }
+table { width:100%; border-collapse:collapse; min-width:700px; }
+th,td { text-align:left; padding:11px 13px; border-bottom:1px solid #edf0f4; vertical-align:top; }
+th { color:var(--muted); font-size:12px; font-weight:700; background:#fafbfc; }
+tr:last-child td { border-bottom:0; }
+.status { display:inline-block; border-radius:999px; padding:2px 8px; font-size:11px; font-weight:800; }
+.pass { background:#dcfce7; color:var(--green); } .pending { background:#fff7d6; color:var(--yellow); }
+.blocked { background:#fee2e2; color:#991b1b; } .not-started { background:#eef2f6; color:var(--gray); }
+.chart-panel { background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:14px; overflow-x:auto; }
+.loss-chart { width:100%; min-width:760px; height:auto; display:block; }
+.line { fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+.grid { stroke:#e8edf2; stroke-width:1; } .axis-line { stroke:#9aa5b1; stroke-width:1; }
+.axis { fill:#667085; font-size:11px; } .marker { stroke:#fff; stroke-width:2; }
+.marker-label { fill:#344054; font-size:11px; } .chart-legend { display:flex; flex-wrap:wrap; gap:16px; color:var(--muted); font-size:12px; margin:0 0 8px 58px; }
+.swatch { display:inline-block; width:18px; height:3px; vertical-align:middle; margin-right:5px; } .teal { background:var(--teal); } .orange { background:var(--orange); } .blue { background:var(--blue); } .red { background:var(--red); }
+.warning,.ok { padding:11px 13px; border-radius:6px; margin-top:8px; } .warning { background:#fff4e5; color:#8a4b08; border:1px solid #f4c98b; } .ok { background:#ecfdf3; color:var(--green); border:1px solid #a7f3d0; }
+.callout { border-left:4px solid var(--orange); background:#fff8f1; padding:13px 15px; color:#713f12; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.footer { color:var(--muted); font-size:12px; margin-top:28px; border-top:1px solid var(--line); padding-top:14px; }
+@media (max-width:800px) { .hero { display:block; } .badge { display:inline-block; margin-top:14px; } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .two-col { grid-template-columns:1fr; } }
+@media (max-width:500px) { main { padding:22px 14px 46px; } h1 { font-size:25px; } .grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">算法与产品进展</div>
+      <h1>EEG专注度解码</h1>
+      <p class="route">AAMP预训练 → Transformer教师模型 → CNN学生模型</p>
+      <p>AAMP预训练已完成；教师模型评估完成，未达70%门槛</p>
+    </div>
+    <div class="badge">预训练通过 / 教师模型未通过</div>
+  </header>
+
+  <section class="section">
+    <div class="grid">
+      <div class="card"><div class="metric-label">主实验最佳验证损失</div><div class="metric">0.4448</div><div class="target">掩码重建损失</div></div>
+      <div class="card"><div class="metric-label">主实验最佳轮次</div><div class="metric">61</div><div class="target">固定预算：100轮</div></div>
+      <div class="card"><div class="metric-label">下游最佳准确率</div><div class="metric">57.3%</div><div class="target">目标：≥ 70%，差距：12.7%</div></div>
+      <div class="card"><div class="metric-label">测试集是否暴露</div><div class="metric">否</div><div class="target">train_val无标签协议</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>模型简介</h2>
+    <p>这是一个<strong>耳周EEG专注度监测模型</strong>，通过耳朵周围的脑电信号，判断用户当前的专注度/认知负荷水平。</p>
+
+    <div class="warning" style="margin-top:14px">
+      <strong>注意：当前实验用的是Ear-SAAD数据集（AAD任务），不是专注度任务。</strong>
+      <p style="margin-top:6px">这是之前选型错误留下的工作流。我们正在用这个数据集验证模型架构和训练流程是否跑通，最终目标是切换到n-back专注度数据集。</p>
+    </div>
+
+    <h3 style="margin-top:18px">最终目标任务：专注度/认知负荷监测</h3>
+    <p>想象一下：你戴着耳挂式设备，模型实时监测你的大脑专注程度——你是在深度思考，还是在走神发呆。这就是专注度监测，用于疲劳检测、学习效率分析、驾驶安全等场景。</p>
+
+    <h3 style="margin-top:18px">当前实验任务：听觉注意解码（AAD）</h3>
+    <p>这是用来验证模型架构的"练手任务"：判断用户在听左边还是右边的说话人。虽然不是最终目标，但同样是耳周EEG分类任务，可以用来验证预训练和微调流程是否有效。</p>
+
+    <div class="two-col" style="margin-top:14px">
+      <div class="card">
+        <h3>输入</h3>
+        <p><strong>19通道耳周EEG信号</strong></p>
+        <p>· 19个电极：左耳9个 + 右耳10个</p>
+        <p>· 采样率：20Hz</p>
+        <p>· 窗口长度：5秒 = 100个采样点</p>
+        <p>· 数据形状：(19通道, 100时间点)</p>
+        <p>· 左右不对称设计（左耳9右耳10）</p>
+      </div>
+      <div class="card">
+        <h3>输出（当前实验）</h3>
+        <p><strong>二分类：左注意 / 右注意（AAD任务）</strong></p>
+        <p>· 模型输出两个概率</p>
+        <p>· 哪个概率大，就判定为哪一边</p>
+        <p>· 跨被试任务（训练和测试是不同的人）</p>
+        <p>· 当前数据集：Ear-SAAD，16个被试</p>
+        <p>· 三折划分：12训练 / 3验证 / 3测试</p>
+        <p style="margin-top:8px; color:var(--teal)"><strong>最终目标：专注度等级分类</strong></p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:18px">数据预处理</h3>
+    <div class="table-wrap"><table><thead><tr><th>步骤</th><th>做了什么</th><th>为什么这么做</th></tr></thead><tbody>
+      <tr><td>归一化</td><td>z-score标准化，只用训练被试统计量</td><td>避免验证/测试数据泄露统计信息</td></tr>
+      <tr><td>截断</td><td>超出±8倍标准差的值截断</td><td>防止极端异常值影响训练</td></tr>
+      <tr><td>零通道策略</td><td>保留零通道，不删除</td><td>耳周电极可能接触不良，保留位置信息</td></tr>
+      <tr><td>窗口划分</td><td>5秒一个窗口，不重叠</td><td>每个窗口独立判断注意方向</td></tr>
+    </table></div>
+
+    <h3 style="margin-top:18px">模型架构：Mini-NeurIPT（迷你版）</h3>
+    <p>这是一个迷你版的NeurIPT脑机接口基础模型，1.65M参数，专为耳周EEG设计。</p>
+
+    <div class="table-wrap"><table><thead><tr><th>组件</th><th>说明</th><th>作用</th></tr></thead><tbody>
+      <tr><td>3D电极嵌入</td><td>每个电极有3D空间坐标</td><td>让模型知道电极在头上的位置，不是随便排列的</td></tr>
+      <tr><td>Transformer编码器</td><td>4层，隐藏维度96</td><td>提取EEG时空特征</td></tr>
+      <tr><td>时间池化</td><td>每4个时间点压缩成1个</td><td>降维，减少计算量</td></tr>
+      <tr><td>IILP脑叶池化</td><td>按脑叶分组注意力池化</td><td>类似人脑分脑叶处理信息</td></tr>
+      <tr><td>PMoE混合专家</td><td>多个专家网络动态切换</td><td>不同被试、不同状态用不同的"专家"</td></tr>
+      <tr><td>分类头</td><td>SwiGLU激活的MLP</td><td>把特征变成二分类输出</td></tr>
+    </table></div>
+
+    <h3 style="margin-top:18px">两阶段训练流程</h3>
+    <div class="table-wrap"><table><thead><tr><th>阶段</th><th>做什么</th><th>数据</th><th>目的</th></tr></thead><tbody>
+      <tr><td><strong>阶段一：AAMP自监督预训练</strong></td><td>完形填空：遮住50%的EEG，让模型猜被遮住的部分</td><td>所有训练+验证被试的无标签数据（共12人）</td><td>让模型先学会EEG的通用特征，不用标签</td></tr>
+      <tr><td><strong>阶段二：监督微调</strong></td><td>在预训练好的编码器上加分类头，训练左/右二分类</td><td>有标签的训练被试数据</td><td>用学到的通用特征，完成具体的注意解码任务</td></tr>
+    </table></div>
+
+    <div class="callout" style="margin-top:14px">
+      <strong>为什么要两阶段？</strong>
+      <p>直接从随机初始化训练，就像让一个没学过英语的人直接做高考题——只能瞎蒙50%。先预训练再微调，就像先背完单词再做题——基础更扎实，效果更好。实验也证明了：预训练比随机初始化提升了6.2个百分点。</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>路线进度</h2>
+    <p>每个状态都对应明确的验收门槛。重建损失下降不代表分类效果一定好。</p>
+    <div class="table-wrap"><table><thead><tr><th>阶段</th><th>状态</th><th>目标</th><th>当前</th></tr></thead><tbody><tr><td>AAMP自监督预训练</td><td><span class="status pass">通过</span></td><td>100轮固定，train_val，排除测试集</td><td>100轮已完成</td></tr><tr><td>AAMP初始化Transformer教师模型</td><td><span class="status pass">完成</span></td><td>训练下游分类器</td><td>已完成三折三seed评估</td></tr><tr><td>三折×三种子分类实验</td><td><span class="status pass">完成</span></td><td>fold 0-2，种子42/43/44</td><td>27次run全部完成</td></tr><tr><td>统一指标报告</td><td><span class="status pass">完成</span></td><td>准确率、Macro-F1、ROC-AUC、被试级指标</td><td>已生成完整评估报告</td></tr><tr><td>教师模型保留门槛</td><td><span class="status blocked">未通过</span></td><td>平均准确率 ≥ 0.70且无类别坍缩</td><td>最佳57.3%，差距12.7%</td></tr><tr><td>CNN知识蒸馏</td><td><span class="status blocked">未开始</span></td><td>仅在教师模型门槛通过后启动</td><td>教师模型未达标，禁止启动</td></tr><tr><td>部署验证</td><td><span class="status not-started">未开始</span></td><td>学生模型质量和资源预算验证</td><td>未开始</td></tr></tbody></table></div>
+  </section>
+
+  <section class="section">
+    <h2>AAMP训练曲线</h2>
+    <p>两次实验使用相同的推荐配置。图中数值为掩码重建损失，不是分类准确率。</p>
+    <div class="chart-panel"><div class="chart-legend"><span><i class="swatch teal"></i>主实验训练集</span><span><i class="swatch orange"></i>主实验验证集</span><span><i class="swatch blue"></i>复训实验训练集</span><span><i class="swatch red"></i>复训实验验证集</span></div><svg class="loss-chart" viewBox="0 0 920 360" role="img" aria-label="AAMP掩码重建损失曲线"><line class="grid" x1="58" x2="900" y1="22.0" y2="22.0" /><text class="axis" x="4" y="26.0">0.634</text><line class="grid" x1="58" x2="900" y1="95.5" y2="95.5" /><text class="axis" x="4" y="99.5">0.583</text><line class="grid" x1="58" x2="900" y1="169.0" y2="169.0" /><text class="axis" x="4" y="173.0">0.533</text><line class="grid" x1="58" x2="900" y1="242.5" y2="242.5" /><text class="axis" x="4" y="246.5">0.482</text><line class="grid" x1="58" x2="900" y1="316.0" y2="316.0" /><text class="axis" x="4" y="320.0">0.431</text><line class="axis-line" x1="58" x2="900" y1="316" y2="316" /><text class="axis" x="58" y="350">第1轮</text><text class="axis" x="860" y="350">第100轮</text><polyline class="line" stroke="#0f766e" points="58.0,42.3 66.5,64.7 75.0,121.7 83.5,157.4 92.0,176.1 100.5,187.2 109.0,194.5 117.5,200.2 126.0,202.9 134.5,208.0 143.1,207.0 151.6,210.9 160.1,213.3 168.6,214.3 177.1,216.6 185.6,219.1 194.1,220.5 202.6,221.4 211.1,220.9 219.6,221.3 228.1,221.5 236.6,224.5 245.1,224.7 253.6,226.9 262.1,224.6 270.6,226.8 279.1,229.1 287.6,228.6 296.1,230.8 304.6,230.5 313.2,228.9 321.7,230.9 330.2,231.1 338.7,233.1 347.2,229.5 355.7,232.8 364.2,234.3 372.7,235.9 381.2,235.9 389.7,235.4 398.2,235.3 406.7,235.1 415.2,235.1 423.7,236.2 432.2,237.5 440.7,239.9 449.2,236.8 457.7,239.0 466.2,240.3 474.7,239.1 483.3,238.8 491.8,239.2 500.3,238.8 508.8,239.3 517.3,240.9 525.8,238.7 534.3,239.3 542.8,242.1 551.3,242.8 559.8,242.4 568.3,243.1 576.8,242.7 585.3,243.1 593.8,240.5 602.3,246.9 610.8,244.2 619.3,242.2 627.8,245.7 636.3,246.9 644.8,248.8 653.4,247.8 661.9,249.4 670.4,250.0 678.9,251.5 687.4,253.4 695.9,255.9 704.4,256.1 712.9,258.0 721.4,257.8 729.9,259.2 738.4,257.2 746.9,259.1 755.4,255.7 763.9,260.2 772.4,260.9 780.9,261.3 789.4,260.8 797.9,262.1 806.4,263.4 814.9,262.4 823.5,261.7 832.0,263.7 840.5,265.3 849.0,264.3 857.5,263.1 866.0,265.9 874.5,264.3 883.0,264.9 891.5,267.0 900.0,264.9" /><polyline class="line" stroke="#f97316" points="58.0,116.8 66.5,157.4 75.0,206.2 83.5,230.8 92.0,233.6 100.5,250.3 109.0,255.7 117.5,258.6 126.0,263.7 134.5,260.5 143.1,270.4 151.6,270.1 160.1,271.8 168.6,272.9 177.1,277.2 185.6,274.5 194.1,275.0 202.6,279.0 211.1,278.1 219.6,276.2 228.1,278.9 236.6,278.9 245.1,281.7 253.6,283.8 262.1,280.9 270.6,284.5 279.1,285.2 287.6,283.5 296.1,283.8 304.6,283.8 313.2,283.8 321.7,285.7 330.2,285.7 338.7,283.9 347.2,287.9 355.7,282.3 364.2,284.5 372.7,290.9 381.2,279.9 389.7,283.5 398.2,288.5 406.7,289.6 415.2,289.6 423.7,287.3 432.2,289.1 440.7,289.4 449.2,292.9 457.7,287.3 466.2,293.3 474.7,288.9 483.3,291.6 491.8,290.1 500.3,287.8 508.8,291.5 517.3,293.3 525.8,287.8 534.3,290.6 542.8,287.8 551.3,292.2 559.8,278.9 568.3,295.7 576.8,292.6 585.3,294.1 593.8,294.3 602.3,295.4 610.8,280.9 619.3,292.4 627.8,291.6 636.3,290.9 644.8,293.1 653.4,286.1 661.9,283.9 670.4,282.9 678.9,278.8 687.4,278.2 695.9,282.6 704.4,279.0 712.9,277.9 721.4,273.6 729.9,276.5 738.4,275.1 746.9,267.9 755.4,272.0 763.9,269.5 772.4,270.2 780.9,266.6 789.4,275.0 797.9,267.9 806.4,268.7 814.9,266.3 823.5,264.3 832.0,262.4 840.5,267.5 849.0,260.7 857.5,259.3 866.0,270.2 874.5,259.9 883.0,267.5 891.5,263.9 900.0,264.5" /><polyline class="line" stroke="#2563eb" points="58.0,42.3 66.5,70.0 75.0,126.2 83.5,161.0 92.0,177.1 100.5,187.2 109.0,194.4 117.5,200.5 126.0,202.5 134.5,208.6 143.1,207.8 151.6,211.5 160.1,213.8 168.6,215.4 177.1,217.4 185.6,219.6 194.1,221.0 202.6,222.5 211.1,221.3 219.6,222.1 228.1,222.1 236.6,225.0 245.1,225.5 253.6,227.7 262.1,224.8 270.6,226.8 279.1,229.5 287.6,228.9 296.1,230.8 304.6,231.0 313.2,229.4 321.7,231.6 330.2,231.3 338.7,232.9 347.2,230.3 355.7,232.7 364.2,234.5 372.7,235.6 381.2,235.9 389.7,235.6 398.2,235.4 406.7,235.4 415.2,234.9 423.7,235.9 432.2,237.8 440.7,240.0 449.2,236.7 457.7,238.4 466.2,239.8 474.7,238.4 483.3,238.5 491.8,239.3 500.3,238.7 508.8,238.9 517.3,240.6 525.8,238.3 534.3,239.7 542.8,241.6 551.3,242.5 559.8,241.6 568.3,242.4 576.8,242.2 585.3,242.7 593.8,239.9 602.3,246.1 610.8,243.3 619.3,241.0 627.8,244.4 636.3,245.0 644.8,246.5 653.4,245.0 661.9,246.1 670.4,246.6 678.9,248.2 687.4,249.3 695.9,251.9 704.4,252.0 712.9,254.6 721.4,253.9 729.9,255.9 738.4,254.1 746.9,256.2 755.4,253.3 763.9,257.2 772.4,258.9 780.9,258.9 789.4,258.3 797.9,259.4 806.4,260.6 814.9,260.3 823.5,259.5 832.0,260.9 840.5,262.8 849.0,262.4 857.5,260.7 866.0,263.4 874.5,261.9 883.0,262.9 891.5,264.6 900.0,262.8" /><polyline class="line" stroke="#dc2626" points="58.0,116.8 66.5,160.4 75.0,209.4 83.5,235.9 92.0,229.3 100.5,245.9 109.0,254.6 117.5,258.3 126.0,265.6 134.5,259.9 143.1,269.5 151.6,268.3 160.1,274.2 168.6,274.3 177.1,276.7 185.6,278.3 194.1,276.4 202.6,279.6 211.1,278.2 219.6,278.7 228.1,276.5 236.6,273.0 245.1,282.4 253.6,283.3 262.1,282.9 270.6,282.9 279.1,283.9 287.6,282.6 296.1,283.5 304.6,284.8 313.2,284.1 321.7,284.7 330.2,283.9 338.7,282.9 347.2,286.5 355.7,283.9 364.2,287.0 372.7,289.3 381.2,282.1 389.7,285.9 398.2,287.3 406.7,288.8 415.2,289.4 423.7,289.5 432.2,288.2 440.7,288.0 449.2,292.0 457.7,290.5 466.2,291.7 474.7,287.6 483.3,289.9 491.8,289.6 500.3,289.6 508.8,290.4 517.3,292.9 525.8,289.9 534.3,292.1 542.8,287.9 551.3,292.2 559.8,280.2 568.3,292.8 576.8,291.3 585.3,292.6 593.8,291.6 602.3,294.6 610.8,279.5 619.3,289.4 627.8,283.9 636.3,294.2 644.8,293.1 653.4,288.4 661.9,287.5 670.4,289.8 678.9,283.9 687.4,277.9 695.9,281.9 704.4,280.7 712.9,286.0 721.4,280.6 729.9,275.3 738.4,276.3 746.9,274.9 755.4,281.4 763.9,279.3 772.4,273.9 780.9,273.0 789.4,270.6 797.9,266.7 806.4,275.0 814.9,270.2 823.5,266.1 832.0,272.2 840.5,262.6 849.0,259.0 857.5,261.0 866.0,261.0 874.5,265.8 883.0,264.8 891.5,263.8 900.0,269.1" /><circle class="marker" fill="#f97316" cx="568.3" cy="295.7" r="4" /><text class="marker-label" x="575.3" y="288.7">主实验最佳点</text><circle class="marker" fill="#dc2626" cx="602.3" cy="294.6" r="4" /><text class="marker-label" x="609.3" y="287.6">复训实验最佳点</text></svg></div>
+    <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>实验</th><th>总轮次</th><th>最佳轮次</th><th>最佳验证损失</th><th>最终训练损失</th><th>最终验证损失</th></tr></thead><tbody><tr><td>主实验</td><td>100</td><td>61</td><td>0.4448</td><td>0.4662</td><td>0.4664</td></tr><tr><td>复训实验</td><td>100</td><td>65</td><td>0.4456</td><td>0.4676</td><td>0.4632</td></tr></tbody></table></div>
+  </section>
+
+  <section class="section">
+    <h2>教师模型评估结果</h2>
+    <p>四组对照实验：AAMP全量微调、AAMP冻结Encoder、随机初始化Transformer、CNN基线。所有实验均为三折×三seed，共27次run。</p>
+
+    <h3 style="margin-top:18px">汇总指标</h3>
+    <div class="table-wrap"><table><thead><tr><th>实验条件</th><th>Run数</th><th>3×3完整</th><th>BA均值±标准差</th><th>Macro-F1均值</th><th>ROC-AUC均值</th><th>类别坍缩run数</th></tr></thead><tbody><tr><td><strong>AAMP全量微调</strong></td><td>9</td><td>是</td><td>0.5685 ± 0.0562</td><td>0.5385</td><td>0.5788</td><td>1</td></tr><tr><td><strong>AAMP冻结Encoder</strong></td><td>9</td><td>是</td><td>0.5731 ± 0.0542</td><td>0.5303</td><td>0.5853</td><td>2</td></tr><tr><td>随机初始化Transformer</td><td>9</td><td>是</td><td>0.5113 ± 0.0104</td><td>0.3796</td><td>0.5239</td><td>7</td></tr><tr><td>CNN基线B0</td><td>9</td><td>是</td><td>0.5219 ± 0.0199</td><td>0.4511</td><td>0.4951</td><td>2</td></tr></tbody></table></div>
+
+    <h3 style="margin-top:18px">各折准确率对比</h3>
+    <div class="table-wrap"><table><thead><tr><th>实验条件</th><th>Fold 0 BA</th><th>Fold 1 BA</th><th>Fold 2 BA</th></tr></thead><tbody><tr><td>AAMP全量微调</td><td>0.6178</td><td>0.5879</td><td>0.4998</td></tr><tr><td>AAMP冻结Encoder</td><td>0.6183</td><td>0.6040</td><td>0.4971</td></tr><tr><td>随机初始化Transformer</td><td>0.5054</td><td>0.5148</td><td>0.5138</td></tr><tr><td>CNN基线B0</td><td>0.5173</td><td>0.5447</td><td>0.5036</td></tr></tbody></table></div>
+
+    <div class="warning" style="margin-top:14px">
+      <strong>关键发现：</strong>
+      <ul style="margin:8px 0 0 18px; padding:0">
+        <li>AAMP预训练比随机初始化提升了约6个百分点（0.51→0.57），证明预训练有效</li>
+        <li>但最佳平均准确率只有57.3%，距离70%目标仍有12.7个百分点差距</li>
+        <li>Fold 2（被试3、6、11、13）是主要失败点，准确率仅50%左右</li>
+        <li>随机初始化Transformer有7/9次run出现类别坍缩，AAMP预训练后降到1-2次</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>目标 vs 当前</h2>
+    <div class="table-wrap"><table><thead><tr><th>指标</th><th>目标</th><th>当前</th><th>状态</th></tr></thead><tbody><tr><td>测试集是否暴露于预训练</td><td>否</td><td>否</td><td><span class="status pass">通过</span></td></tr><tr><td>无标签预训练数据划分</td><td>train_val</td><td>train_val</td><td><span class="status pass">通过</span></td></tr><tr><td>固定轮次预算</td><td>100</td><td>100</td><td><span class="status pass">通过</span></td></tr><tr><td>主协议检查点</td><td>final_pretrain_model.pt</td><td>已生成</td><td><span class="status pass">通过</span></td></tr><tr><td>下游平均平衡准确率</td><td>≥ 0.70</td><td>0.5731（冻结Encoder）</td><td><span class="status blocked">未通过</span></td></tr><tr><td>跨fold/seed无类别坍缩</td><td>无</td><td>2次run有坍缩</td><td><span class="status blocked">未通过</span></td></tr><tr><td>AAMP vs 随机初始化</td><td>相同协议下AAMP更优</td><td>AAMP提升6.2个百分点</td><td><span class="status pass">通过</span></td></tr><tr><td>CNN知识蒸馏</td><td>教师模型门槛通过</td><td>未开始</td><td><span class="status blocked">未开始</span></td></tr></tbody></table></div>
+  </section>
+
+  <section class="section two-col">
+    <div>
+      <h2>检查点审计</h2>
+      <div class="card">
+        <h3>主迁移检查点</h3>
+        <p><strong>artifacts/pretrain_aamp_ear_saad_search_v2_lr4p43e-4_bs16/final_pretrain_model.pt</strong></p>
+        <p>SHA-256: <code>33ac934da7384fc950950dfa48dc9e10ccfc7f4df56fe66a63285878c0c8bdce</code></p>
+        <p>用途：固定轮次协议权重。诊断用最佳检查点不作为主迁移权重使用。</p>
+      </div>
+    </div>
+    <div>
+      <h2>产品决策</h2>
+      <div class="callout">
+        <strong>当前决策：禁止启动CNN蒸馏。</strong>
+        <p>AAMP预训练门槛已完成，且预训练确实有效（比随机初始化提升6.2个百分点）。但教师模型保留门槛未通过：最佳平均准确率仅57.3%，距离70%目标差距12.7个百分点，且Fold 2存在严重泛化失败。</p>
+        <p style="margin-top:8px"><strong>下一步建议：</strong>先审计标签方向、被试对齐、归一化统计量和跨被试分布偏移，再考虑调整架构。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>下游实验结果</h2>
+    <p>三组对照实验全部完成，三折×三seed，共27次run。</p>
+    <div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>轮次</th><th>批次大小</th><th>BA均值</th><th>坍缩run数</th></tr></thead><tbody><tr><td>随机初始化Transformer</td><td><span class="status pass">完成</span></td><td>25</td><td>64</td><td>0.5113</td><td>7</td></tr><tr><td>AAMP + 冻结Encoder</td><td><span class="status pass">完成</span></td><td>25</td><td>64</td><td>0.5731</td><td>2</td></tr><tr><td>AAMP + 全量微调</td><td><span class="status pass">完成</span></td><td>25</td><td>64</td><td>0.5685</td><td>1</td></tr></tbody></table></div>
+  </section>
+
+  <section class="section">
+    <h2>下一步行动建议</h2>
+    <div class="warning">
+      <strong>禁止启动CNN蒸馏。</strong>
+      <ol style="margin:8px 0 0 18px; padding:0">
+        <li>将Fold 2被试（3、6、11、13）作为主要鲁棒性失败集群重点排查</li>
+        <li>审计标签方向、被试/trial对齐、归一化统计量、缺失通道模式和跨被试分布偏移</li>
+        <li>审计期间保持AAMP检查点和教师结构不变，每次只改一个变量</li>
+        <li>修正参考基线后，再考虑调整架构或超参数</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer class="footer">本报告仅基于现有项目产物生成。本报告生成器不调用任何模型训练、推理、评估或超参数搜索流程。</footer>
+</main>
+</body>
+</html>

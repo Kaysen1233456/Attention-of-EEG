@@ -107,6 +107,19 @@ class AAMPConfig:
 
 
 @dataclass
+class PretrainingConfig:
+    """Frequency-domain masked reconstruction options."""
+    masking: str = "frequency"
+    bands: dict = field(default_factory=lambda: {
+        "delta": [0.5, 4.0],
+        "theta": [4.0, 8.0],
+        "alpha": [8.0, 13.0],
+        "beta": [13.0, 30.0],
+    })
+    mask_bands: List[str] = field(default_factory=lambda: ["alpha"])
+
+
+@dataclass
 class TrainingConfig:
     """训练配置"""
     epochs: int = 100
@@ -126,6 +139,7 @@ class TrainingConfig:
     # 一致性正则化（可选，AAD中有用）
     use_consistency_loss: bool = False
     consistency_lambda: float = 0.0
+    class_weights: Optional[List[float]] = None  # 类别权重，用于类别不平衡，如 [0.674, 1.937]
     # 学习率调度
     lr_scheduler: str = "none"  # none / cosine / step / onecycle
     warmup_ratio: float = 0.0
@@ -177,6 +191,7 @@ class AttentionConfig:
     data: DataConfig = field(default_factory=DataConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     aamp: AAMPConfig = field(default_factory=AAMPConfig)
+    pretraining: PretrainingConfig = field(default_factory=PretrainingConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
@@ -251,7 +266,7 @@ class AttentionConfig:
                     setattr(obj, parts[-1], value)
             else:
                 # 尝试在各子配置中查找
-                for sub_name in ["data", "model", "aamp", "training", "search", "output"]:
+                for sub_name in ["data", "model", "aamp", "pretraining", "training", "search", "output"]:
                     sub = getattr(self, sub_name)
                     if hasattr(sub, key):
                         setattr(sub, key, value)

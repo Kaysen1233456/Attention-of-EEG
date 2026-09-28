@@ -48,6 +48,7 @@ data:
   sampling_rate: 250
   window_samples: 500
   window_seconds: 2.0
+  zero_channel_policy: retain
 experiment_name: baseline_dual_branch
 model:
   activation: silu

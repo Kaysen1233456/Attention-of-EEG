@@ -158,7 +158,7 @@ class QuasiRandomSearch:
         params = {}
         for i, name in enumerate(self.param_names):
             spec = self.search_space[name]
-            if len(spec) == 4 and all(not isinstance(v, str) for v in spec):
+            if len(spec) != 3 or not isinstance(spec[2], str):
                 index = min(int(sample[i] * len(spec)), len(spec) - 1)
                 params[name] = spec[index]
                 continue

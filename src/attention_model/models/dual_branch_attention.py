@@ -356,7 +356,15 @@ class DualBranchAttentionClassifier(nn.Module):
                 channel_positions=channel_positions,
             )
             state = torch.load(pretrained_path, map_location="cpu")
-            self.pretrained_backbone.load_state_dict(state, strict=True)
+            incompatible = self.pretrained_backbone.load_state_dict(state, strict=False)
+            decoder_keys = {"decoder.0.weight", "decoder.0.bias", "decoder.2.weight", "decoder.2.bias"}
+            unexpected = set(incompatible.unexpected_keys)
+            missing = set(incompatible.missing_keys)
+            if unexpected or missing - decoder_keys:
+                raise RuntimeError(
+                    f"Incompatible pretrained encoder checkpoint: missing={sorted(missing)}, "
+                    f"unexpected={sorted(unexpected)}"
+                )
             if freeze_pretrained_backbone:
                 for parameter in self.pretrained_backbone.parameters():
                     parameter.requires_grad = False

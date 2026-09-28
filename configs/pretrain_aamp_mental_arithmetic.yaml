@@ -1,0 +1,62 @@
+project_name: EEG-Attention-Decoding
+experiment_name: aamp_mental_arithmetic_250hz_8ch
+random_seed: 42
+
+data:
+  data_dir: data/processed/mental_arithmetic_250hz_8ch
+  sampling_rate: 250
+  window_seconds: 2.0
+  window_samples: 500
+  n_channels: 8
+  channel_names: [Fz, F3, F4, T7, T8, Pz, P3, P4]
+  channel_positions:
+    - [0.0, 1.0, 0.3]    # Fz: 额区中线
+    - [-0.4, 0.8, 0.5]   # F3: 左额
+    - [0.4, 0.8, 0.5]    # F4: 右额
+    - [-1.0, 0.0, 0.0]   # T7: 左颞（接近耳部）
+    - [1.0, 0.0, 0.0]    # T8: 右颞（接近耳部）
+    - [0.0, -1.0, 0.3]   # Pz: 顶区中线
+    - [-0.4, -0.8, 0.5]  # P3: 左顶
+    - [0.4, -0.8, 0.5]   # P4: 右顶
+  normalize: true
+  normalization_mode: train_subjects_only
+  zero_channel_policy: retain
+  normalize_clip_std: 8.0
+
+model:
+  architecture: mini_neuript
+  d_model: 96
+  dropout: 0.15
+  temporal_pool: 4
+  pretrained_n_heads: 8
+  pretrained_n_layers: 4
+  pretrained_d_ff: 384
+
+aamp:
+  use_aamp: true
+  mask_ratio_range: [0.2, 0.35, 0.5]
+  mask_token_ratio: 0.8
+  random_token_ratio: 0.1
+  unchanged_ratio: 0.1
+  percentile_low: 0.0
+  percentile_high: 1.0
+  amplitude_type: abs
+
+pretraining:
+  masking: frequency
+  sampling_rate: 250
+  bands:
+    delta: [0.5, 4.0]
+    theta: [4.0, 8.0]
+    alpha: [8.0, 13.0]
+    beta: [13.0, 30.0]
+  mask_bands: [alpha]
+
+training:
+  epochs: 100
+  batch_size: 16
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  learning_rate: 0.000443
+  weight_decay: 0.0001
