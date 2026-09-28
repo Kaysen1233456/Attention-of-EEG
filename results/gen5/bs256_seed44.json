@@ -1,0 +1,23 @@
+{
+  "protocol": "fixed Gen5; train+val fit; one final test evaluation",
+  "epochs": 15,
+  "batch_size": 256,
+  "normalization": "window_local_zscore_clip_8",
+  "model": "Gen5 temporal CNN + relative spectral power",
+  "test_metrics": {
+    "balanced_accuracy": 0.6822935129386742,
+    "macro_f1": 0.564729867482161,
+    "roc_auc": 0.776542006380716,
+    "confusion_matrix": [
+      [
+        165,
+        199
+      ],
+      [
+        11,
+        113
+      ]
+    ],
+    "n_samples": 488
+  }
+}
