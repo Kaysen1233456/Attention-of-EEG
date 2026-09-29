@@ -82,7 +82,8 @@ def evaluate(model, loader, device):
 
 def train_fold(x, y, train_idx, val_idx, params, seed, epochs, device, return_model=False):
     torch.manual_seed(seed); np.random.seed(seed)
-    model = TeacherB(**params).to(device)
+    model_kwargs = {key: params[key] for key in ("d_model", "n_heads", "n_layers", "dropout")}
+    model = TeacherB(**model_kwargs).to(device)
     train_loader, val_loader = make_loaders(x, y, train_idx, val_idx, params["batch_size"])
     counts = np.bincount(y[train_idx], minlength=2)
     weights = torch.tensor(counts.sum() / (2 * counts), dtype=torch.float32, device=device)
