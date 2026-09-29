@@ -126,3 +126,12 @@ outer-validation early-stopping report. If calibration improves BA while
 preserving AUC, the problem is partly decision calibration. If it does not,
 the remaining limitation is representation or cross-subject domain shift and
 the model structure must be revisited.
+
+## Route B data audit
+
+Before changing Teacher B again, run `scripts/audit_teacher_b_data.py`. It
+reconstructs the processed train/val label runs, verifies each subject has a
+class-0 run followed by a class-1 run, checks non-finite, zero, and constant
+windows, and reports RMS and relative band-power distributions. Fold 5
+subjects are compared with the other development subjects. This audit never
+loads test data.
