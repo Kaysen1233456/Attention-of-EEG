@@ -1,0 +1,9 @@
+{
+  "learning_rate": 0.00030265400272101283,
+  "weight_decay": 4.084129623824164e-05,
+  "dropout": 0.14111876080331268,
+  "d_model": 128,
+  "n_heads": 4,
+  "n_layers": 1,
+  "batch_size": 128
+}
