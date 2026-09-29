@@ -80,8 +80,8 @@ def main():
     parser.add_argument("--data", default="data/processed/mental_arithmetic_250hz_8ch")
     parser.add_argument("--method", choices=("random", "sobol", "bayesian"), required=True)
     parser.add_argument("--trials", type=int, default=20)
-    parser.add_argument("--folds", type=int, default=4)
-    parser.add_argument("--epochs", type=int, default=8)
+    parser.add_argument("--folds", type=int, default=8)
+    parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
@@ -128,6 +128,7 @@ def main():
         "stage": "B-search", "method": args.method,
         "data_protocol": "development_only_subject_group_kfold",
         "test_accessed": False, "folds": args.folds, "epochs_per_trial": args.epochs,
+        "protocol_alignment": "same fold count and epoch budget as fixed-model verification",
         "search_space": SEARCH_SPACE, "seed": args.seed,
         "best_params": best["params"], "best_objective": best["objective"],
         "best_metrics": {key: best[key] for key in ("mean", "std", "folds")},

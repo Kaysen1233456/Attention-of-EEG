@@ -11,7 +11,7 @@ from teacher_b_common import load_development, normalize_windows, train_fold
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data/processed/mental_arithmetic_250hz_8ch")
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", required=True)
     parser.add_argument("--params-json", help="best_params.json produced by the selection script")
@@ -38,7 +38,7 @@ def main():
         rows.append({"fold": fold, "validation_subjects": sorted(np.unique(groups[val_idx]).tolist()), **metrics})
         print(rows[-1], flush=True)
     keys = ("balanced_accuracy", "macro_f1", "roc_auc")
-    result = {"stage": "B", "model": "CNN + 2-layer Transformer + relative spectral power", "params": params, "folds": rows,
+    result = {"stage": "B", "model": f"CNN + {params['n_layers']}-layer Transformer + relative spectral power", "params": params, "folds": rows,
               "mean": {key: float(np.mean([row[key] for row in rows])) for key in keys},
               "std": {key: float(np.std([row[key] for row in rows])) for key in keys}}
     out = Path(args.output); out.mkdir(parents=True, exist_ok=True)

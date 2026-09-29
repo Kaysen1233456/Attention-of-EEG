@@ -55,7 +55,8 @@ CNN, temporal Transformer, and relative spectral-power branch. The test split
 is never loaded by the search script.
 
 All methods and trials use the same fixed subject-disjoint `GroupKFold`
-partitions. The default budget is four folds and eight epochs per trial. The
+partitions. The search and fixed-model verification use eight folds and the
+same 15-epoch budget. The
 script supports independent random search, Sobol quasi-random search, and
 Gaussian-process Bayesian search with expected improvement.
 
