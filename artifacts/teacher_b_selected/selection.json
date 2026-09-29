@@ -1,0 +1,373 @@
+{
+  "criterion": "max(mean_BA - 0.25 * std_BA)",
+  "selected": {
+    "source": "artifacts/teacher_b_search_bayesian/summary.json",
+    "method": "bayesian",
+    "objective": 0.6901618465905093,
+    "params": {
+      "learning_rate": 0.0005813525552098672,
+      "weight_decay": 7.58576195571765e-06,
+      "dropout": 0.19654015461343172,
+      "d_model": 128,
+      "n_heads": 4,
+      "n_layers": 1,
+      "batch_size": 128
+    },
+    "metrics": {
+      "mean": {
+        "balanced_accuracy": 0.6971113302778684,
+        "macro_f1": 0.6538637182629585,
+        "roc_auc": 0.7434729310398507
+      },
+      "std": {
+        "balanced_accuracy": 0.027797934749436398,
+        "macro_f1": 0.026838975925041655,
+        "roc_auc": 0.04055846396612914
+      },
+      "folds": [
+        {
+          "fold": 0,
+          "balanced_accuracy": 0.7301707779886148,
+          "macro_f1": 0.693841642228739,
+          "roc_auc": 0.7965429316888046,
+          "confusion_matrix": [
+            [
+              494,
+              186
+            ],
+            [
+              66,
+              182
+            ]
+          ]
+        },
+        {
+          "fold": 1,
+          "balanced_accuracy": 0.711937256292095,
+          "macro_f1": 0.6311902520518158,
+          "roc_auc": 0.7474742998936547,
+          "confusion_matrix": [
+            [
+              426,
+              302
+            ],
+            [
+              40,
+              208
+            ]
+          ]
+        },
+        {
+          "fold": 2,
+          "balanced_accuracy": 0.6553970223325062,
+          "macro_f1": 0.6276149000699899,
+          "roc_auc": 0.6823876728110599,
+          "confusion_matrix": [
+            [
+              511,
+              217
+            ],
+            [
+              97,
+              151
+            ]
+          ]
+        },
+        {
+          "fold": 3,
+          "balanced_accuracy": 0.6909402644982575,
+          "macro_f1": 0.6628080787012897,
+          "roc_auc": 0.7474868197658833,
+          "confusion_matrix": [
+            [
+              529,
+              193
+            ],
+            [
+              87,
+              161
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "candidates": [
+    {
+      "source": "artifacts/teacher_b_search_random/summary.json",
+      "method": "random",
+      "objective": 0.6826681882439338,
+      "params": {
+        "learning_rate": 0.0004597505784732166,
+        "weight_decay": 8.61257919259488e-06,
+        "dropout": 0.23001700529445268,
+        "d_model": 128,
+        "n_heads": 8,
+        "n_layers": 2,
+        "batch_size": 128
+      },
+      "metrics": {
+        "mean": {
+          "balanced_accuracy": 0.6913924430773251,
+          "macro_f1": 0.6349192978121605,
+          "roc_auc": 0.7421110530572834
+        },
+        "std": {
+          "balanced_accuracy": 0.03489701933356475,
+          "macro_f1": 0.038463031137169826,
+          "roc_auc": 0.0361445895720552
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "balanced_accuracy": 0.7367409867172676,
+            "macro_f1": 0.6928588814209347,
+            "roc_auc": 0.7792813092979127,
+            "confusion_matrix": [
+              [
+                481,
+                199
+              ],
+              [
+                58,
+                190
+              ]
+            ]
+          },
+          {
+            "fold": 1,
+            "balanced_accuracy": 0.6810971286777738,
+            "macro_f1": 0.6139516590389016,
+            "roc_auc": 0.7320431584544488,
+            "confusion_matrix": [
+              [
+                431,
+                297
+              ],
+              [
+                57,
+                191
+              ]
+            ]
+          },
+          {
+            "fold": 2,
+            "balanced_accuracy": 0.6415056717476072,
+            "macro_f1": 0.5896236305053204,
+            "roc_auc": 0.6874778447359091,
+            "confusion_matrix": [
+              [
+                435,
+                293
+              ],
+              [
+                78,
+                170
+              ]
+            ]
+          },
+          {
+            "fold": 3,
+            "balanced_accuracy": 0.7062259851666517,
+            "macro_f1": 0.6432430202834853,
+            "roc_auc": 0.7696418997408632,
+            "confusion_matrix": [
+              [
+                455,
+                267
+              ],
+              [
+                54,
+                194
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "artifacts/teacher_b_search_sobol/summary.json",
+      "method": "sobol",
+      "objective": 0.6897834705886114,
+      "params": {
+        "learning_rate": 0.0004673265601857648,
+        "weight_decay": 1.4138404236242331e-06,
+        "dropout": 0.16241858354769648,
+        "d_model": 96,
+        "n_heads": 4,
+        "n_layers": 1,
+        "batch_size": 128
+      },
+      "metrics": {
+        "mean": {
+          "balanced_accuracy": 0.6979890512995339,
+          "macro_f1": 0.6477988891104143,
+          "roc_auc": 0.7430103988820461
+        },
+        "std": {
+          "balanced_accuracy": 0.0328223228436897,
+          "macro_f1": 0.03017104251565622,
+          "roc_auc": 0.05391231132256515
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "balanced_accuracy": 0.7406783681214422,
+            "macro_f1": 0.6752689049549734,
+            "roc_auc": 0.7935839658444024,
+            "confusion_matrix": [
+              [
+                437,
+                243
+              ],
+              [
+                40,
+                208
+              ]
+            ]
+          },
+          {
+            "fold": 1,
+            "balanced_accuracy": 0.700682382133995,
+            "macro_f1": 0.6492367049396227,
+            "roc_auc": 0.7545529067706487,
+            "confusion_matrix": [
+              [
+                483,
+                245
+              ],
+              [
+                65,
+                183
+              ]
+            ]
+          },
+          {
+            "fold": 2,
+            "balanced_accuracy": 0.6483738036157392,
+            "macro_f1": 0.5982261266593003,
+            "roc_auc": 0.6527660847217298,
+            "confusion_matrix": [
+              [
+                445,
+                283
+              ],
+              [
+                78,
+                170
+              ]
+            ]
+          },
+          {
+            "fold": 3,
+            "balanced_accuracy": 0.7022216513269591,
+            "macro_f1": 0.6684638198877606,
+            "roc_auc": 0.7711386381914038,
+            "confusion_matrix": [
+              [
+                522,
+                200
+              ],
+              [
+                79,
+                169
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "source": "artifacts/teacher_b_search_bayesian/summary.json",
+      "method": "bayesian",
+      "objective": 0.6901618465905093,
+      "params": {
+        "learning_rate": 0.0005813525552098672,
+        "weight_decay": 7.58576195571765e-06,
+        "dropout": 0.19654015461343172,
+        "d_model": 128,
+        "n_heads": 4,
+        "n_layers": 1,
+        "batch_size": 128
+      },
+      "metrics": {
+        "mean": {
+          "balanced_accuracy": 0.6971113302778684,
+          "macro_f1": 0.6538637182629585,
+          "roc_auc": 0.7434729310398507
+        },
+        "std": {
+          "balanced_accuracy": 0.027797934749436398,
+          "macro_f1": 0.026838975925041655,
+          "roc_auc": 0.04055846396612914
+        },
+        "folds": [
+          {
+            "fold": 0,
+            "balanced_accuracy": 0.7301707779886148,
+            "macro_f1": 0.693841642228739,
+            "roc_auc": 0.7965429316888046,
+            "confusion_matrix": [
+              [
+                494,
+                186
+              ],
+              [
+                66,
+                182
+              ]
+            ]
+          },
+          {
+            "fold": 1,
+            "balanced_accuracy": 0.711937256292095,
+            "macro_f1": 0.6311902520518158,
+            "roc_auc": 0.7474742998936547,
+            "confusion_matrix": [
+              [
+                426,
+                302
+              ],
+              [
+                40,
+                208
+              ]
+            ]
+          },
+          {
+            "fold": 2,
+            "balanced_accuracy": 0.6553970223325062,
+            "macro_f1": 0.6276149000699899,
+            "roc_auc": 0.6823876728110599,
+            "confusion_matrix": [
+              [
+                511,
+                217
+              ],
+              [
+                97,
+                151
+              ]
+            ]
+          },
+          {
+            "fold": 3,
+            "balanced_accuracy": 0.6909402644982575,
+            "macro_f1": 0.6628080787012897,
+            "roc_auc": 0.7474868197658833,
+            "confusion_matrix": [
+              [
+                529,
+                193
+              ],
+              [
+                87,
+                161
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

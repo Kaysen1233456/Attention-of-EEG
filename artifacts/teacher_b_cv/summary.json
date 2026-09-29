@@ -1,0 +1,201 @@
+{
+  "stage": "B",
+  "model": "CNN + 2-layer Transformer + relative spectral power",
+  "params": {
+    "d_model": 128,
+    "n_heads": 4,
+    "n_layers": 1,
+    "dropout": 0.19654015461343172,
+    "learning_rate": 0.0005813525552098672,
+    "weight_decay": 7.58576195571765e-06,
+    "batch_size": 128
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "validation_subjects": [
+        5,
+        7,
+        16,
+        27
+      ],
+      "balanced_accuracy": 0.7026847692935891,
+      "macro_f1": 0.6545723053949746,
+      "roc_auc": 0.754746835443038,
+      "confusion_matrix": [
+        [
+          202,
+          114
+        ],
+        [
+          29,
+          95
+        ]
+      ]
+    },
+    {
+      "fold": 1,
+      "validation_subjects": [
+        6,
+        15,
+        23,
+        31
+      ],
+      "balanced_accuracy": 0.7729971641261963,
+      "macro_f1": 0.7315065024856,
+      "roc_auc": 0.8424317617866004,
+      "confusion_matrix": [
+        [
+          278,
+          86
+        ],
+        [
+          27,
+          97
+        ]
+      ]
+    },
+    {
+      "fold": 2,
+      "validation_subjects": [
+        4,
+        14,
+        22,
+        30
+      ],
+      "balanced_accuracy": 0.647775611485289,
+      "macro_f1": 0.656327859150762,
+      "roc_auc": 0.6548209854661466,
+      "confusion_matrix": [
+        [
+          316,
+          48
+        ],
+        [
+          71,
+          53
+        ]
+      ]
+    },
+    {
+      "fold": 3,
+      "validation_subjects": [
+        3,
+        12,
+        21,
+        29
+      ],
+      "balanced_accuracy": 0.7198245303084012,
+      "macro_f1": 0.7086998093004337,
+      "roc_auc": 0.8040809996455158,
+      "confusion_matrix": [
+        [
+          298,
+          66
+        ],
+        [
+          47,
+          77
+        ]
+      ]
+    },
+    {
+      "fold": 4,
+      "validation_subjects": [
+        2,
+        11,
+        20,
+        28
+      ],
+      "balanced_accuracy": 0.81012938674229,
+      "macro_f1": 0.740116604844797,
+      "roc_auc": 0.8860111662531017,
+      "confusion_matrix": [
+        [
+          261,
+          103
+        ],
+        [
+          12,
+          112
+        ]
+      ]
+    },
+    {
+      "fold": 5,
+      "validation_subjects": [
+        1,
+        10,
+        19,
+        26
+      ],
+      "balanced_accuracy": 0.6421924849344204,
+      "macro_f1": 0.4976956008452964,
+      "roc_auc": 0.7392546969159872,
+      "confusion_matrix": [
+        [
+          127,
+          237
+        ],
+        [
+          8,
+          116
+        ]
+      ]
+    },
+    {
+      "fold": 6,
+      "validation_subjects": [
+        0,
+        9,
+        18,
+        25
+      ],
+      "balanced_accuracy": 0.6874335342077278,
+      "macro_f1": 0.5585091991341992,
+      "roc_auc": 0.7674361928394188,
+      "confusion_matrix": [
+        [
+          157,
+          207
+        ],
+        [
+          7,
+          117
+        ]
+      ]
+    },
+    {
+      "fold": 7,
+      "validation_subjects": [
+        8,
+        13,
+        17,
+        24
+      ],
+      "balanced_accuracy": 0.6509731483150117,
+      "macro_f1": 0.6335880999342538,
+      "roc_auc": 0.7135294647684267,
+      "confusion_matrix": [
+        [
+          264,
+          94
+        ],
+        [
+          54,
+          70
+        ]
+      ]
+    }
+  ],
+  "mean": {
+    "balanced_accuracy": 0.7042513286766157,
+    "macro_f1": 0.6476269976362896,
+    "roc_auc": 0.7702890128897795
+  },
+  "std": {
+    "balanced_accuracy": 0.057383949433964326,
+    "macro_f1": 0.07910627803240085,
+    "roc_auc": 0.06847027608419382
+  }
+}
