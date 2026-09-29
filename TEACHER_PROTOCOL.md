@@ -108,3 +108,17 @@ per-subject metrics. The frozen teacher is accepted only if:
 - standard deviation of the three seed BA values <= 0.05
 - no seed mean BA < 0.70
 - minimum fold BA across all seeds >= 0.62
+
+## Route B repair: nested threshold calibration
+
+The seed confirmation showed that fixed probability threshold `0.5` still
+fails on several subjects. The next diagnostic keeps Teacher B v2 frozen and
+uses nested subject GroupKFold. For each outer fold, an inner GroupKFold
+produces out-of-fold probabilities from outer-train subjects; the threshold is
+selected from those probabilities only, then evaluated once on outer
+validation. The test split remains untouched.
+
+The report compares fixed threshold `0.5` with the calibrated threshold. If
+calibration improves BA while preserving AUC, the problem is partly decision
+calibration. If it does not, the remaining limitation is representation or
+cross-subject domain shift and the model structure must be revisited.

@@ -64,19 +64,25 @@ def make_loaders(x, y, train_idx, val_idx, batch_size):
     return train_loader, val_loader
 
 
-def evaluate(model, loader, device):
+def predict_probabilities(model, loader, device):
     model.eval(); probabilities, labels = [], []
     with torch.no_grad():
         for x, y in loader:
             probabilities.append(torch.softmax(model(x.to(device))["logits"], dim=1)[:, 1].cpu().numpy())
             labels.append(y.numpy())
     probabilities, labels = np.concatenate(probabilities), np.concatenate(labels)
-    predictions = probabilities >= 0.5
+    return probabilities, labels
+
+
+def evaluate(model, loader, device, threshold=0.5):
+    probabilities, labels = predict_probabilities(model, loader, device)
+    predictions = probabilities >= threshold
     return {
         "balanced_accuracy": float(balanced_accuracy_score(labels, predictions)),
         "macro_f1": float(f1_score(labels, predictions, average="macro", zero_division=0)),
         "roc_auc": float(roc_auc_score(labels, probabilities)),
         "confusion_matrix": confusion_matrix(labels, predictions, labels=[0, 1]).tolist(),
+        "threshold": float(threshold),
     }
 
 
