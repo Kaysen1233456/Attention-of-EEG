@@ -80,7 +80,7 @@ def evaluate(model, loader, device):
     }
 
 
-def train_fold(x, y, train_idx, val_idx, params, seed, epochs, device):
+def train_fold(x, y, train_idx, val_idx, params, seed, epochs, device, return_model=False):
     torch.manual_seed(seed); np.random.seed(seed)
     model = TeacherB(**params).to(device)
     train_loader, val_loader = make_loaders(x, y, train_idx, val_idx, params["batch_size"])
@@ -102,4 +102,5 @@ def train_fold(x, y, train_idx, val_idx, params, seed, epochs, device):
             stale += 1
             if stale >= 4: break
     model.load_state_dict(best_state)
-    return evaluate(model, val_loader, device)
+    metrics = evaluate(model, val_loader, device)
+    return (metrics, model) if return_model else metrics

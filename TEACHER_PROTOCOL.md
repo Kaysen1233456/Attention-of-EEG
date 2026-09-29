@@ -83,3 +83,28 @@ Teacher B acceptance thresholds are:
 - mean ROC-AUC >= 0.77
 - ROC-AUC standard deviation <= 0.08
 - minimum fold BA >= 0.62
+
+## Teacher B v2 frozen configuration
+
+The Bayesian-selected configuration is frozen in
+`configs/teacher_b_v2.json` and must not be changed during seed confirmation:
+
+```text
+learning_rate = 3.0265400272101283e-4
+weight_decay  = 4.084129623824164e-5
+dropout       = 0.14111876080331268
+d_model       = 128
+n_heads       = 4
+n_layers      = 1
+batch_size    = 128
+epochs        = 15
+```
+
+The next experiment is a confirmation only: seeds 42, 43, and 44, each with
+the fixed eight-fold subject GroupKFold protocol. It reports fold metrics and
+per-subject metrics. The frozen teacher is accepted only if:
+
+- mean of the three seed BA values >= 0.72
+- standard deviation of the three seed BA values <= 0.05
+- no seed mean BA < 0.70
+- minimum fold BA across all seeds >= 0.62

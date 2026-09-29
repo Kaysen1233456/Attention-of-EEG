@@ -1,0 +1,17 @@
+{
+  "model": "Teacher B v2: multi-scale CNN + 1-layer Transformer + relative spectral power",
+  "learning_rate": 0.00030265400272101283,
+  "weight_decay": 0.00004084129623824164,
+  "dropout": 0.14111876080331268,
+  "d_model": 128,
+  "n_heads": 4,
+  "n_layers": 1,
+  "batch_size": 128,
+  "epochs": 15,
+  "gradient_clip_norm": 2.0,
+  "normalization": "window z-score, clip=8",
+  "loss": "class-balanced CrossEntropy",
+  "selection_method": "Bayesian expected improvement",
+  "selection_objective": "mean BA - 0.25 * BA std",
+  "source_commit": "1a19302"
+}
