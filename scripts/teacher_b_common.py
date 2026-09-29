@@ -111,3 +111,25 @@ def train_fold(x, y, train_idx, val_idx, params, seed, epochs, device, return_mo
     model.load_state_dict(best_state)
     metrics = evaluate(model, val_loader, device)
     return (metrics, model) if return_model else metrics
+
+
+def train_full_train(x, y, train_idx, params, seed, epochs, device):
+    """Fit on all supplied training subjects for a fixed epoch budget."""
+    torch.manual_seed(seed); np.random.seed(seed)
+    model_kwargs = {key: params[key] for key in ("d_model", "n_heads", "n_layers", "dropout")}
+    model = TeacherB(**model_kwargs).to(device)
+    loader = DataLoader(
+        TensorDataset(torch.from_numpy(x[train_idx]), torch.from_numpy(y[train_idx])),
+        batch_size=params["batch_size"], shuffle=True,
+    )
+    counts = np.bincount(y[train_idx], minlength=2)
+    weights = torch.tensor(counts.sum() / (2 * counts), dtype=torch.float32, device=device)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=params["learning_rate"], weight_decay=params["weight_decay"])
+    criterion = nn.CrossEntropyLoss(weight=weights)
+    for _ in range(epochs):
+        model.train()
+        for xb, yb in loader:
+            optimizer.zero_grad(set_to_none=True)
+            loss = criterion(model(xb.to(device))["logits"], yb.to(device))
+            loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0); optimizer.step()
+    return model

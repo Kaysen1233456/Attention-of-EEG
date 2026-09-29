@@ -15,7 +15,7 @@ from sklearn.model_selection import GroupKFold
 from torch.utils.data import DataLoader, TensorDataset
 
 from teacher_b_common import (
-    evaluate, load_development, normalize_windows, predict_probabilities, train_fold,
+    evaluate, load_development, normalize_windows, predict_probabilities, train_fold, train_full_train,
 )
 
 
@@ -71,11 +71,10 @@ def main():
                 raise RuntimeError("Inner GroupKFold did not produce complete out-of-fold probabilities")
             threshold = select_threshold(oof_prob, inner_y)
 
-            # Fit the outer-train model using an inner validation split for early stopping.
-            fit_train, fit_val = inner_splits[0]
-            _, final_model = train_fold(
-                inner_x, inner_y, fit_train, fit_val, params,
-                seed + outer_fold * 1000 + 999, epochs, device, return_model=True,
+            # Fit the final outer model on every outer-train subject for the
+            # fixed budget. Outer validation is never used for early stopping.
+            final_model = train_full_train(
+                x, y, outer_train, params, seed + outer_fold * 1000 + 999, epochs, device,
             )
             outer_loader = loader_for(x, y, outer_val, params["batch_size"])
             calibrated = evaluate(final_model, outer_loader, device, threshold=threshold)

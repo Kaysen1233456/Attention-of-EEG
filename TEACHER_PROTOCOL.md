@@ -118,7 +118,11 @@ produces out-of-fold probabilities from outer-train subjects; the threshold is
 selected from those probabilities only, then evaluated once on outer
 validation. The test split remains untouched.
 
-The report compares fixed threshold `0.5` with the calibrated threshold. If
-calibration improves BA while preserving AUC, the problem is partly decision
-calibration. If it does not, the remaining limitation is representation or
-cross-subject domain shift and the model structure must be revisited.
+The report compares fixed threshold `0.5` with the calibrated threshold. The
+outer model is now fit on all outer-train subjects for the fixed epoch budget;
+outer validation is not used for early stopping. This makes the diagnostic
+strictly leakage-safe, though its score is not directly comparable to the old
+outer-validation early-stopping report. If calibration improves BA while
+preserving AUC, the problem is partly decision calibration. If it does not,
+the remaining limitation is representation or cross-subject domain shift and
+the model structure must be revisited.
