@@ -12,6 +12,13 @@ C: Three-seed ensemble of the selected teacher
 
 The student remains the frozen Gen5 baseline: temporal CNN plus relative band power.
 
+> ⚠️ **Naming only, not current state.** "Student" is a role reserved for a future
+> distillation stage, inherited from the abandoned Ear-SAAD route (which did plan
+> a Transformer teacher -> CNN student distillation). On the mental-arithmetic
+> route, Gen5 and Teacher B are two independent models, each trained by direct
+> label supervision only. **Distillation has never been started, and Teacher B has
+> never supervised Gen5.** See the "术语澄清" section of `README.md`.
+
 ## Data protocol
 
 - Development data is the original train and val subjects combined.

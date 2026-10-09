@@ -129,6 +129,12 @@ CNN + 频谱模型已经固定为 Gen5。它在开发集交叉验证中优于纯
 
 Gen5 现在冻结为 `student_baseline`。历史 test holdout 已暴露，后续实验不得使用它选择结构、超参数、epoch、阈值或校准方案。
 
+> ⚠️ **`student_baseline` 只是角色命名，不是现状。** 该称呼沿用自已放弃的 Ear-SAAD
+> 路线（那条路线确有「Transformer 教师 → CNN 学生」的蒸馏计划）。在**心算路线**上：
+> Gen5 与 Teacher B 是**两个各自独立、只用标签直接监督训练**的模型，
+> **蒸馏从未启动**，Teacher B 也从未监督过 Gen5。
+> 见 `README.md` 的「术语澄清」一节。
+
 ## 教师模型阶段：待讨论方案
 
 教师训练应该只使用原始 train 和 val 被试组成的开发集，并在开发集内部执行嵌套 GroupKFold。

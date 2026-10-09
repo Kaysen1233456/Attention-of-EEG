@@ -1,16 +1,55 @@
 # EEG Attention Decoding
 
-> 当前主线是 Mental Arithmetic 的 Gen5 student baseline 与 Teacher B candidate。
-> Ear-SAAD Transformer teacher 路线已放弃，README 中相关内容仅为历史记录，不应继续训练或蒸馏。
+> ⚠️ **状态：本 README 仍在整理中，下面混杂了两条路线，请先看清属于哪一条。**
+> - **当前主线**：心算（Mental Arithmetic）数据集 —— 见下面的「术语澄清」
+> - **已放弃**：Ear-SAAD 耳周听觉注意解码 —— 见「历史归档」，仅作记录，不要再执行
+
+## 术语澄清：Gen5、Teacher B、「学生」、蒸馏
+
+**当前主线（心算数据集）只有两个模型，它们是两个各自独立训练的分类模型：**
+
+| | Gen5 | Teacher B |
+|---|---|---|
+| 时序分支 | temporal CNN（2 层 Conv1d） | **多尺度** CNN（3 条并行分支，卷积核 7/15/31）+ 1 层 Transformer |
+| 频谱分支 | 相对频带功率 → MLP | 相对频带功率 → MLP |
+| 参数量 | **8,418**（32.9 KB fp32） | **193,202**（754.7 KB fp32），**23 倍** |
+| 训练方式 | 标签直接监督（class-balanced cross entropy） | 同左 |
+| 同一评估口径 BA | **0.7232** | 0.7130 |
+
+**四点关键澄清：**
+
+1. **Gen5 与 Teacher B 之间目前没有任何关系。** 两者各自用标签做直接监督训练，
+   Teacher B **从未**监督过 Gen5，也从未指导过它的训练。
+2. **「Gen5 是学生」只是将来蒸馏阶段的角色预设，不是现状。**
+   这个称呼来自**已放弃的 Ear-SAAD 路线** —— 那条路线真的有
+   「Transformer 教师 → 轻量双分支 CNN 学生 → 耳戴设备」的蒸馏计划。
+   它被沿用到了心算路线，但**心算路线的蒸馏从未启动过**。
+3. **「直接监督训练」= 只用标签算交叉熵**；「蒸馏」= 用教师的输出
+   （软标签 / 中间特征）当监督信号。这是两种不同的训练方式，
+   **不要混用**。
+4. **当前能代表模型能力的是 Gen5，不是 Teacher B。** Teacher B 尚未通过验收门槛
+   （要求 3 seed 平均 BA ≥ 0.72，实测 0.6991），且在同一评估口径下低于 Gen5。
+   **教师这一步目前没有产出可用的增益。**
 
 Gen5 的固定模型、改动原因、交叉验证结果和最终测试协议记录在
-[GEN5_PROTOCOL.md](GEN5_PROTOCOL.md)。
+[GEN5_PROTOCOL.md](GEN5_PROTOCOL.md)；教师路线的门槛与阶段见
+[TEACHER_PROTOCOL.md](TEACHER_PROTOCOL.md)。
+
+> 相关证据与作废记录：`artifacts/probes/_superseded/README.md`、
+> `experiments_log/INVALID_METHODS_REGISTRY.md`、`PROJECT_ISSUES_PLAIN.md`。
+
+---
+
+## 历史归档：Ear-SAAD 路线（已放弃）
+
+> ⚠️ **以下内容全部属于已放弃的 Ear-SAAD 路线**（19 个耳周通道、20 Hz、
+> 5 秒窗口、二分类）。与当前心算主线无关，**不应再执行、训练或蒸馏**。
 
 基于 Ear-SAAD 数据集的跨被试听觉注意解码项目。项目借鉴 NeurIPS 2025
 NeurIPT 的 3D 电极嵌入、IILP 和 PMoE 思路，但所有组件都必须通过监督式、
 被试独立的开发实验验证后才能保留。
 
-当前目标不是在随机窗口划分上追求高分，而是建立可复现的：
+该路线当时的设想是：
 
 ```text
 监督式 Transformer 教师
@@ -18,8 +57,6 @@ NeurIPT 的 3D 电极嵌入、IILP 和 PMoE 思路，但所有组件都必须通
         -> 轻量级双分支 CNN 学生
         -> 耳戴式设备部署
 ```
-
-## 当前研究路线
 
 ### 已确定的原则
 
