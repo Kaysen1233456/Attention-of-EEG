@@ -1,0 +1,77 @@
+{
+  "run_name": "spectral_band_audit",
+  "note": "40维频谱特征各频带信息量审计；本地仅2被试，结论为假设级",
+  "started_at": "2026-10-09T07:07:32.540120+00:00",
+  "command": [
+    "C:/Users/Raymond James/Anaconda/python.exe",
+    "scripts/audit_spectral_bands.py"
+  ],
+  "command_line": "C:/Users/Raymond James/Anaconda/python.exe scripts/audit_spectral_bands.py",
+  "cwd": "C:\\Users\\famsun\\Attention",
+  "python": "3.7.4 (default, Aug  9 2019, 18:34:13) [MSC v.1915 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\Raymond James\\Anaconda\\python.exe",
+  "platform": "Windows-10-10.0.26100-SP0",
+  "packages": {
+    "numpy": "1.16.5",
+    "scipy": "1.3.1",
+    "torch": null,
+    "sklearn": "0.21.3",
+    "mne": null,
+    "pandas": "0.25.1"
+  },
+  "git": {
+    "branch": "main",
+    "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+    "sha_short": "4d73343",
+    "remote": "git@github.com:Kaysen1233456/Attention-of-EEG.git",
+    "dirty": true,
+    "status_porcelain": [
+      "M GEN5_PROTOCOL.md",
+      " M PROJECT_MEMORY.md",
+      " M PROJECT_STATE.md",
+      " M README.md",
+      " M TEACHER_AAMP_DISTILLATION_ROADMAP.md",
+      " M TEACHER_NEXT_STEPS.md",
+      " M scripts/audit_mental_arithmetic.py",
+      " M scripts/audit_teacher_b_data.py",
+      " M scripts/baseline_spectral.py",
+      " M scripts/cv_feature_fusion.py",
+      " M scripts/cv_spectral.py",
+      " M scripts/final_spectral_cnn.py",
+      " M scripts/train_gen5_seeds.py",
+      " M tests/test_audit_fold2.py",
+      " M tests/test_config.yaml",
+      "?? CALIBRATION_PROTOCOL.md",
+      "?? OldIron/",
+      "?? PROJECT_ISSUES_PLAIN.md",
+      "?? data/",
+      "?? experiments_log/CHANGELOG.md",
+      "?? experiments_log/INVALID_METHODS_REGISTRY.md",
+      "?? experiments_log/README.md",
+      "?? experiments_log/runs/",
+      "?? scripts/audit_spectral_bands.py",
+      "?? scripts/probes/",
+      "?? scripts/restamp_run_logs.py",
+      "?? scripts/run_with_log.py"
+    ]
+  },
+  "finished_at": "2026-10-09T07:07:48.235784+00:00",
+  "duration_seconds": 0.876,
+  "exit_code": 0,
+  "success": true,
+  "error": null,
+  "artifacts": {
+    "stdout": "experiments_log\\runs\\20261009-150732_spectral_band_audit\\stdout.log",
+    "stderr": "experiments_log\\runs\\20261009-150732_spectral_band_audit\\stderr.log",
+    "combined": "experiments_log\\runs\\20261009-150732_spectral_band_audit\\combined.log"
+  },
+  "sha_history": [
+    {
+      "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+      "sha_short": "4d73343",
+      "stamped_at": "2026-10-09T07:07:32.540120+00:00",
+      "note": "initial (migrated from meta.git)"
+    }
+  ],
+  "restamped_at": "2026-10-09T07:31:00.569623+00:00"
+}

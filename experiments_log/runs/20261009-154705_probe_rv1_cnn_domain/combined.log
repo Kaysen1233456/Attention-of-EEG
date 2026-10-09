@@ -1,0 +1,80 @@
+[stdout] === 校准窗口预算（协议 §1.1 / R5）===
+[stdout]   被试组 0   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 1   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 2   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 3   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 4   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 5   静息  40 → 校准 30 → 可评估静息  10 ｜ focus  31  <== 触发 R5 rest_after_cal_low
+[stdout]   被试组 6   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 7   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 8   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 9   静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 10  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 11  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 12  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 13  静息  85 → 校准 30 → 可评估静息  55 ｜ focus  31
+[stdout]   被试组 14  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 15  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 16  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 17  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 18  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 19  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 20  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 21  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 22  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 23  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 24  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 25  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 26  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 27  静息  94 → 校准 30 → 可评估静息  64 ｜ focus  31
+[stdout]   被试组 28  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 29  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 30  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout]   被试组 31  静息  91 → 校准 30 → 可评估静息  61 ｜ focus  31
+[stdout] 
+[stdout] device=cuda  时长匹配集: (1922, 8, 500)  被试=31  跳过被试组=[5]
+[stdout] 
+[stdout] S0_Gen5_baseline                   窗口BA=0.6956 被试级BA=0.6956±0.1151 AUC=0.7410 折间0.6988±0.0751 min折=0.625 >0.6被试=23/31
+[stderr] Traceback (most recent call last):
+[stderr]   File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 221, in <module>
+[stderr]     main()
+[stderr]   File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 212, in main
+[stderr]     out["results"].append(evaluate_setting("S1_Gen5_+subject_std_spectral", xw, f_cal, ys, grp, seeds=(42,)))
+[stderr]                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 147, in evaluate_setting
+[stderr]     m = train(xw, xs, y, tr, va, sd + f)
+[stderr]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 126, in train
+[stderr]     loss = crit(model(xb.to(DEVICE), sb.to(DEVICE)), yb.to(DEVICE))
+[stderr]                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+[stderr]     return self._call_impl(*args, **kwargs)
+[stderr]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+[stderr]     return forward_call(*args, **kwargs)
+[stderr]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 97, in forward
+[stderr]     s = self.spectral(xs)
+[stderr]         ^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+[stderr]     return self._call_impl(*args, **kwargs)
+[stderr]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+[stderr]     return forward_call(*args, **kwargs)
+[stderr]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\container.py", line 250, in forward
+[stderr]     input = module(input)
+[stderr]             ^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+[stderr]     return self._call_impl(*args, **kwargs)
+[stderr]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+[stderr]     return forward_call(*args, **kwargs)
+[stderr]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\normalization.py", line 217, in forward
+[stderr]     return F.layer_norm(
+[stderr]            ^^^^^^^^^^^^^
+[stderr]   File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\functional.py", line 2900, in layer_norm
+[stderr]     return torch.layer_norm(
+[stderr]            ^^^^^^^^^^^^^^^^^
+[stderr] RuntimeError: expected scalar type Double but found Float

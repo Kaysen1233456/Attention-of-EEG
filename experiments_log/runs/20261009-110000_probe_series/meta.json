@@ -1,0 +1,211 @@
+{
+  "run_name": "probe_series",
+  "note": "5 组诊断探针：数据混淆、被试级标准化、CNN 域适应、教师域适应、教师/学生 2x2 对照",
+  "captured": "backfilled",
+  "backfill_disclaimer": "本日志为事后回填。原始运行在 2026-10-09 11:07-11:15 之间逐条执行，脚本与结果 JSON 已归档到 scripts/probes/ 与 artifacts/probes/。",
+  "commands": [
+    "python scripts/probes/confound_probe.py --conditions A B C D --epochs 15 --output artifacts/probes/confound_probe_result.json",
+    "python scripts/probes/domain_probe.py",
+    "python scripts/probes/cnn_domain_probe.py",
+    "python scripts/probes/teacherB_probe.py",
+    "python scripts/probes/matrix_probe.py"
+  ],
+  "cwd": "C:\\Users\\famsun\\Attention",
+  "python_executable": "C:\\Users\\famsun\\Attention\\OldIron\\python.exe",
+  "packages": {
+    "torch": "2.5.1+cu121",
+    "numpy": "2.x"
+  },
+  "device": "cuda (RTX 3060 Laptop)",
+  "git": {
+    "branch": "main",
+    "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+    "sha_short": "4d73343",
+    "remote": "git@github.com:Kaysen1233456/Attention-of-EEG.git",
+    "dirty": true,
+    "status_porcelain": [
+      "M GEN5_PROTOCOL.md",
+      " M PROJECT_MEMORY.md",
+      " M PROJECT_STATE.md",
+      " M README.md",
+      " M TEACHER_AAMP_DISTILLATION_ROADMAP.md",
+      " M TEACHER_NEXT_STEPS.md",
+      " M scripts/audit_mental_arithmetic.py",
+      " M scripts/audit_teacher_b_data.py",
+      " M scripts/baseline_spectral.py",
+      " M scripts/cv_feature_fusion.py",
+      " M scripts/cv_spectral.py",
+      " M scripts/final_spectral_cnn.py",
+      " M scripts/train_gen5_seeds.py",
+      " M tests/test_audit_fold2.py",
+      " M tests/test_config.yaml",
+      "?? CALIBRATION_PROTOCOL.md",
+      "?? OldIron/",
+      "?? PROJECT_ISSUES_PLAIN.md",
+      "?? data/",
+      "?? experiments_log/CHANGELOG.md",
+      "?? experiments_log/INVALID_METHODS_REGISTRY.md",
+      "?? experiments_log/README.md",
+      "?? experiments_log/runs/",
+      "?? scripts/audit_spectral_bands.py",
+      "?? scripts/probes/",
+      "?? scripts/restamp_run_logs.py",
+      "?? scripts/run_with_log.py"
+    ]
+  },
+  "exit_code": 0,
+  "success": true,
+  "results": {
+    "confound": {
+      "A_original_91rest_31focus": {
+        "n": 3850,
+        "window_ba": 0.6854,
+        "auc": 0.7342,
+        "fold_std": 0.0395,
+        "fold_min": 0.6144,
+        "subjects_above_0.60": 22
+      },
+      "B_duration_matched_31_31": {
+        "n": 1984,
+        "window_ba": 0.6885,
+        "auc": 0.7087,
+        "fold_std": 0.043,
+        "fold_min": 0.621,
+        "subjects_above_0.60": 24
+      },
+      "C_position_control": {
+        "n": 1984,
+        "window_ba": 0.6724,
+        "auc": 0.7042,
+        "fold_std": 0.0469,
+        "fold_min": 0.5887,
+        "subjects_above_0.60": 21
+      },
+      "D_label_shuffled_null": {
+        "n": 1984,
+        "window_ba": 0.5252,
+        "auc": 0.5131,
+        "fold_std": 0.0166,
+        "fold_min": 0.5081,
+        "subjects_above_0.60": 1
+      }
+    },
+    "subject_std_linear": {
+      "N0_raw": {
+        "window_ba": 0.6255,
+        "auc": 0.6751,
+        "subjects_above_0.60": 15
+      },
+      "N1_subject_std": {
+        "window_ba": 0.6976,
+        "auc": 0.7551,
+        "subjects_above_0.60": 26
+      },
+      "N2_subject_channel_std": {
+        "window_ba": 0.6976,
+        "auc": 0.7551,
+        "subjects_above_0.60": 26
+      }
+    },
+    "cnn_domain": {
+      "S0_Gen5_baseline": {
+        "window_ba": 0.6905,
+        "auc": 0.7102,
+        "fold_std": 0.0401,
+        "fold_min": 0.6371,
+        "subjects_above_0.60": 24
+      },
+      "S1_Gen5_subject_std": {
+        "window_ba": 0.744,
+        "auc": 0.8046,
+        "fold_std": 0.0821,
+        "fold_min": 0.6089,
+        "subjects_above_0.60": 28
+      },
+      "S2_Gen5_subject_std_3seed_ens": {
+        "window_ba": 0.7344,
+        "auc": 0.8061,
+        "fold_std": 0.0831,
+        "fold_min": 0.5968,
+        "subjects_above_0.60": 27
+      }
+    },
+    "teacher_b_domain": {
+      "T0_original_no_std": {
+        "window_ba": 0.7071,
+        "auc": 0.7565,
+        "fold_std": 0.0474,
+        "fold_min": 0.6353,
+        "subjects_above_0.60": 26
+      },
+      "T1_matched_no_std": {
+        "window_ba": 0.6613,
+        "auc": 0.6761,
+        "fold_std": 0.0474,
+        "fold_min": 0.5847,
+        "subjects_above_0.60": 23
+      },
+      "T2_matched_subject_std": {
+        "window_ba": 0.7308,
+        "auc": 0.795,
+        "fold_std": 0.0756,
+        "fold_min": 0.6129,
+        "subjects_above_0.60": 28
+      }
+    },
+    "matrix_2x2": {
+      "protocol": "original (91 rest + 31 focus), 8-fold GroupKFold, epochs=15",
+      "gen5_no_std": {
+        "window_ba": 0.6943,
+        "auc": 0.7379,
+        "fold_std": 0.043,
+        "fold_min": 0.6144,
+        "subjects_above_0.60": 26
+      },
+      "gen5_subject_std": {
+        "window_ba": 0.7359,
+        "auc": 0.7821,
+        "fold_std": 0.0502,
+        "fold_min": 0.6459,
+        "subjects_above_0.60": 28
+      },
+      "teacherB_no_std": {
+        "window_ba": 0.7071,
+        "auc": 0.7565,
+        "fold_std": 0.0474,
+        "fold_min": 0.6353,
+        "subjects_above_0.60": 26
+      },
+      "teacherB_subject_std": {
+        "window_ba": 0.7405,
+        "auc": 0.7957,
+        "fold_std": 0.0373,
+        "fold_min": 0.68,
+        "subjects_above_0.60": 28
+      }
+    }
+  },
+  "model_params": {
+    "gen5_student": {
+      "params": 8418,
+      "int8_kb": 8.2,
+      "macs_m": 2.37
+    },
+    "teacher_b": {
+      "params": 193202,
+      "int8_kb": 189,
+      "macs_m": 13.0
+    },
+    "ratio": 22.95
+  },
+  "verdict": "SIGNAL_REAL_BUT_BOTTLENECK_IS_CROSS_SUBJECT_DOMAIN_SHIFT",
+  "sha_history": [
+    {
+      "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+      "sha_short": "4d73343",
+      "stamped_at": "2026-10-09T07:30:56.109885+00:00",
+      "note": "initial (migrated from meta.git)"
+    }
+  ],
+  "restamped_at": "2026-10-09T07:30:56.109885+00:00"
+}

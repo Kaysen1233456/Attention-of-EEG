@@ -1,0 +1,100 @@
+{
+  "run_name": "teacher_b_seed_confirmation",
+  "note": "三 seed × 8 折确认，门槛：均值 BA>=0.72、seed间std<=0.05、每seed>=0.70、min折>=0.62",
+  "captured": "backfilled",
+  "backfill_disclaimer": "本日志为事后回填（backfilled）：原始运行发生在加日志规范之前，内容根据 summary.json 产物与终端输出重建，非实时捕获。后续所有运行请使用 scripts/run_with_log.py 实时捕获。",
+  "command": [
+    "python",
+    "scripts/run_with_log.py",
+    "--name",
+    "teacher_b_seed_confirmation",
+    "--",
+    "python",
+    "scripts/train_teacher_b_seeds.py",
+    "--output",
+    "artifacts/teacher_b_seed_confirmation"
+  ],
+  "command_actual": "cd C:\\Users\\famsun\\Attention && PYTHONPATH=src:scripts ./OldIron/python.exe scripts/train_teacher_b_seeds.py --output \"C:\\Users\\Raymond James\\WorkBuddy AI\\2026-10-09-10-41-57\\artifacts_out\\teacher_b_seed_confirmation\"",
+  "command_line": "python scripts/run_with_log.py --name teacher_b_seed_confirmation -- python scripts/train_teacher_b_seeds.py --output artifacts/teacher_b_seed_confirmation",
+  "cwd": "C:\\Users\\famsun\\Attention",
+  "python": "3.12.15 (Anaconda, OldIron)",
+  "python_executable": "C:\\Users\\famsun\\Attention\\OldIron\\python.exe",
+  "packages": {
+    "numpy": "2.x",
+    "torch": "2.5.1+cu121",
+    "sklearn": "?",
+    "scipy": "?"
+  },
+  "git": {
+    "branch": "main",
+    "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+    "sha_short": "4d73343",
+    "remote": "git@github.com:Kaysen1233456/Attention-of-EEG.git",
+    "dirty": true,
+    "status_porcelain": [
+      "M GEN5_PROTOCOL.md",
+      " M PROJECT_MEMORY.md",
+      " M PROJECT_STATE.md",
+      " M README.md",
+      " M TEACHER_AAMP_DISTILLATION_ROADMAP.md",
+      " M TEACHER_NEXT_STEPS.md",
+      " M scripts/audit_mental_arithmetic.py",
+      " M scripts/audit_teacher_b_data.py",
+      " M scripts/baseline_spectral.py",
+      " M scripts/cv_feature_fusion.py",
+      " M scripts/cv_spectral.py",
+      " M scripts/final_spectral_cnn.py",
+      " M scripts/train_gen5_seeds.py",
+      " M tests/test_audit_fold2.py",
+      " M tests/test_config.yaml",
+      "?? CALIBRATION_PROTOCOL.md",
+      "?? OldIron/",
+      "?? PROJECT_ISSUES_PLAIN.md",
+      "?? data/",
+      "?? experiments_log/CHANGELOG.md",
+      "?? experiments_log/INVALID_METHODS_REGISTRY.md",
+      "?? experiments_log/README.md",
+      "?? experiments_log/runs/",
+      "?? scripts/audit_spectral_bands.py",
+      "?? scripts/probes/",
+      "?? scripts/restamp_run_logs.py",
+      "?? scripts/run_with_log.py"
+    ]
+  },
+  "duration_seconds": 402.0,
+  "exit_code": 0,
+  "success": true,
+  "artifacts": {
+    "stdout": "20261009-112100_teacher_b_seed_confirmation/stdout.log",
+    "stderr": "20261009-112100_teacher_b_seed_confirmation/stderr.log",
+    "combined": "20261009-112100_teacher_b_seed_confirmation/combined.log"
+  },
+  "acceptance": {
+    "overall_mean_ba_at_least": 0.72,
+    "overall_seed_ba_std_at_most": 0.05,
+    "minimum_seed_mean_ba": 0.7,
+    "minimum_fold_ba_at_least": 0.62
+  },
+  "verdict": "FAIL",
+  "result": {
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "folds": 8,
+    "test_accessed": false,
+    "overall_mean_ba": 0.6991,
+    "overall_seed_std_ba": 0.0082,
+    "minimum_fold_ba": 0.5483
+  },
+  "sha_history": [
+    {
+      "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+      "sha_short": "4d73343",
+      "stamped_at": "2026-10-09T07:30:58.284038+00:00",
+      "note": "initial (migrated from meta.git)"
+    }
+  ],
+  "restamped_at": "2026-10-09T07:30:58.284038+00:00"
+}

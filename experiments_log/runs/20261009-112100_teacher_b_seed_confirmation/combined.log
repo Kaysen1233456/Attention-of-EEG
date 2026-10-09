@@ -1,0 +1,13 @@
+[stdout] teacher_b_seed_confirmation: seeds=[42, 43, 44], folds=8, test_accessed=False
+[stdout] seed 42  mean_BA=0.7060  std_BA=0.0390  mean_F1=0.6615  mean_AUC=0.7634
+[stdout] seed 43  mean_BA=0.6876  std_BA=0.0702  mean_F1=0.6184  mean_AUC=0.7372
+[stdout] seed 44  mean_BA=0.7037  std_BA=0.0514  mean_F1=0.6341  mean_AUC=0.7490
+[stdout] overall_mean    BA=0.6991  F1=0.6380  AUC=0.7498
+[stdout] overall_seed_std BA=0.0082  F1=0.0178  AUC=0.0107
+[stdout] minimum_fold_balanced_accuracy = 0.5483  (fold 5, seed 43)
+[stdout] acceptance gate:
+[stdout]   overall_mean_ba_at_least  0.72 -> 0.6991  FAIL
+[stdout]   overall_seed_ba_std_at_most 0.05 -> 0.0082  PASS
+[stdout]   minimum_seed_mean_ba      0.70 -> 0.6876  FAIL
+[stdout]   minimum_fold_ba_at_least  0.62 -> 0.5483  FAIL
+[stdout] wrote artifacts/teacher_b_seed_confirmation/summary.json

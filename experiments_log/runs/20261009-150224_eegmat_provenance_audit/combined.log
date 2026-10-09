@@ -1,0 +1,57 @@
+# 数据来源核查 · 原始输出（云端 ModelScope，逐字记录）
+# 执行人：项目 owner（人工执行）  记录人：AI 算法工程师
+# 执行环境：root@dsw-2240478-654d84c78-2lxqq  /mnt/workspace
+# 目的：判定 data/raw/eegmat 本地副本残缺是否意味着「数据集不完整」，
+#       并验证 data/processed/mental_arithmetic_250hz_8ch 的来源真实性
+# ---------------------------------------------------------------------------
+
+DS=/mnt/workspace/attention_data/eegmat
+
+# ── 1. 库存盘点 ─────────────────────────────
+EDF 总数 : 72   (期望 72)
+被试数   : 36   (期望 36)
+rest _1  : 36
+focus _2 : 36
+
+# ── 2. 有没有第三段？（关键，期望为空）─────
+--- 非 _1/_2 命名的文件（期望为空）---
+（空 —— 无任何第三段记录）
+
+# ── 3. 子目录 ───────────────────────────────
+--- 子目录 ---
+/mnt/workspace/attention_data/eegmat
+（仅此一层，无隐藏 session 子目录）
+
+# ── 4. 缺号检查 ─────────────────────────────
+--- 缺失被试编号 ---
+sed: -e 表达式 #1, 字符 26: “s”命令的RHS非法引用\1
+00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+26 27 28 29 30 31 32 33 34 35
+# 【说明】此段为 sed 转义在远端 shell 中的兼容性问题导致第二路输入为空，
+#         于是 comm 把 00-35 全部判为「缺失」——**假警报，非真实缺号**。
+#         第 1 步已独立证明 36 个被试齐全（36 + 36 = 72 个文件）。
+
+# ── 5. 逐文件时长（纯 EDF 头解析，不依赖 mne）──
+文件数 72   期望 72
+Subject04_1.edf        nsig=22 total=170s windows=85  <== 非标称时长
+Subject10_1.edf        nsig=22 total=188s windows=94  <== 非标称时长
+Subject31_1.edf        nsig=22 total=80s  windows=40  <== 非标称时长
+标称 182s/62s 之外的文件: 3 个（本地已知 3 个静息异常，属正常个体差异）
+
+# ── 6. 处理产物 ─────────────────────────────
+总计 135609
+drwxr-xr-x 2 root root      4096  9月 22 11:54 .
+drwxr-xr-x 6 root root      4096  9月 22 11:37 ..
+-rw-r--r-- 1 root root      1933  9月 22 11:37 metadata.json
+-rw-r--r-- 1 root root      4032  9月 22 11:37 test_labels.npy
+-rw-r--r-- 1 root root  15616128  9月 22 11:37 test_waveforms.npy
+-rw-r--r-- 1 root root     27024  9月 22 11:37 train_labels.npy
+-rw-r--r-- 1 root root 107584128  9月 22 11:37 train_waveforms.npy
+-rw-r--r-- 1 root root      4032  9月 22 11:37 val_labels.npy
+-rw-r--r-- 1 root root  15616128  9月 22 11:37 val_waveforms.npy
+metadata: 36 3362 488 488
+train (3362, 8, 500) float64  rest=2494 focus=868
+val   (488, 8, 500) float64  rest=364 focus=124
+test  (488, 8, 500) float64  rest=364 focus=124
+
+root@dsw-2240478-654d84c78-2lxqq:/mnt/workspace#

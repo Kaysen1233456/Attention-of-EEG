@@ -1,0 +1,199 @@
+{
+  "run_name": "eegmat_provenance_audit",
+  "run_id": "20261009-150224",
+  "category": "audit",
+  "kind": "data_provenance_verification",
+  "execution_channel": "cloud",
+  "executed_by": "project_owner (manual, via shell)",
+  "recorded_by": "ai_algorithm_engineer",
+  "executed_at_local": "2026-10-09T15:01:38+08:00",
+  "host": "root@dsw-2240478-654d84c78-2lxqq",
+  "workdir": "/mnt/workspace",
+  "writes_to_project": false,
+  "read_only": true,
+  "commands": [
+    "ls $DS/*.edf | wc -l",
+    "ls $DS/Subject*_1.edf | wc -l",
+    "ls $DS/Subject*_2.edf | wc -l",
+    "ls $DS | grep -Ev '^Subject[0-9]+_[12]\\.edf$'",
+    "find $DS -maxdepth 2 -type d",
+    "find $DS -iname '*_3*' -o -iname '*session*' -o -iname '*run*'",
+    "python3 <EDF header duration scan>",
+    "python3 <processed array shape/label scan>"
+  ],
+  "dataset": {
+    "identity": "PhysioNet eegmat v1.0.0 - EEG During Mental Arithmetic Tasks",
+    "url": "https://physionet.org/content/eegmat/1.0.0/",
+    "cloud_dir": "/mnt/workspace/attention_data/eegmat",
+    "files_total": 72,
+    "subjects_total": 36,
+    "segments_per_subject": 2,
+    "third_segment_exists": false,
+    "hidden_subdirs": false,
+    "sampling_rate_hz": 500,
+    "signals_per_file": 22,
+    "eeg_channels": 19,
+    "nominal_rest_seconds": 182,
+    "nominal_focus_seconds": 62,
+    "anomalous_rest_files": {
+      "Subject04_1.edf": {
+        "seconds": 170,
+        "windows_2s": 85
+      },
+      "Subject10_1.edf": {
+        "seconds": 188,
+        "windows_2s": 94
+      },
+      "Subject31_1.edf": {
+        "seconds": 80,
+        "windows_2s": 40
+      }
+    }
+  },
+  "processed_arrays": {
+    "dir": "/mnt/workspace/Attention-of-EEG/data/processed/mental_arithmetic_250hz_8ch",
+    "dtype": "float64",
+    "train_shape": [
+      3362,
+      8,
+      500
+    ],
+    "val_shape": [
+      488,
+      8,
+      500
+    ],
+    "test_shape": [
+      488,
+      8,
+      500
+    ],
+    "train_rest": 2494,
+    "train_focus": 868,
+    "val_rest": 364,
+    "val_focus": 124,
+    "test_rest": 364,
+    "test_focus": 124
+  },
+  "reconciliation": {
+    "status": "EXACT_MATCH",
+    "checks": [
+      {
+        "expr": "25 * 91 + (40 + 85 + 94)",
+        "value": 2494,
+        "observed": 2494,
+        "pass": true
+      },
+      {
+        "expr": "28 * 31",
+        "value": 868,
+        "observed": 868,
+        "pass": true
+      },
+      {
+        "expr": "2494 + 868",
+        "value": 3362,
+        "observed": 3362,
+        "pass": true
+      },
+      {
+        "expr": "4 * 91",
+        "value": 364,
+        "observed": 364,
+        "pass": true
+      },
+      {
+        "expr": "4 * 31",
+        "value": 124,
+        "observed": 124,
+        "pass": true
+      },
+      {
+        "expr": "3362*8*500*8 + 128 bytes",
+        "value": 107584128,
+        "observed": 107584128,
+        "pass": true
+      },
+      {
+        "expr": "488*8*500*8 + 128 bytes",
+        "value": 15616128,
+        "observed": 15616128,
+        "pass": true
+      }
+    ]
+  },
+  "conclusions": {
+    "dataset_complete_upstream": true,
+    "local_copy_incomplete": true,
+    "local_copy_files": 4,
+    "local_copy_subjects": 2,
+    "processed_arrays_provenance_verified": true,
+    "third_independent_recording_exists": false,
+    "calibration_protocol_R1_satisfiable": false
+  },
+  "local_verification_commands": [
+    "md5sum data/raw/eegmat/*.edf",
+    "python3 -c <EDF header parse on local 4 files>"
+  ],
+  "local_observed": {
+    "files": [
+      "Subject00_1.edf",
+      "Subject00_2.edf",
+      "Subject01_1.edf",
+      "Subject01_2.edf"
+    ],
+    "md5": {
+      "Subject00_1.edf": "1f05f324fa62fd87a36568bf352b34d0",
+      "Subject00_2.edf": "dd457105502785b7be2c5e8963608b38",
+      "Subject01_1.edf": "6db580833a6ed2fb514e0f5be5e07e00",
+      "Subject01_2.edf": "c269a1174c1a8f2d9831c1f1d1af4dc8"
+    },
+    "note": "4 个文件 md5 互不相同，确认不是重复副本"
+  },
+  "sha_history": [
+    {
+      "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+      "sha_short": "4d73343",
+      "stamped_at": "2026-10-09T07:30:59.879608+00:00",
+      "note": "初始盖戳：建立 sha_history 基线（提交前，dirty=true）",
+      "dirty": true
+    }
+  ],
+  "git": {
+    "branch": "main",
+    "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+    "sha_short": "4d73343",
+    "remote": "git@github.com:Kaysen1233456/Attention-of-EEG.git",
+    "dirty": true,
+    "status_porcelain": [
+      "M GEN5_PROTOCOL.md",
+      " M PROJECT_MEMORY.md",
+      " M PROJECT_STATE.md",
+      " M README.md",
+      " M TEACHER_AAMP_DISTILLATION_ROADMAP.md",
+      " M TEACHER_NEXT_STEPS.md",
+      " M scripts/audit_mental_arithmetic.py",
+      " M scripts/audit_teacher_b_data.py",
+      " M scripts/baseline_spectral.py",
+      " M scripts/cv_feature_fusion.py",
+      " M scripts/cv_spectral.py",
+      " M scripts/final_spectral_cnn.py",
+      " M scripts/train_gen5_seeds.py",
+      " M tests/test_audit_fold2.py",
+      " M tests/test_config.yaml",
+      "?? CALIBRATION_PROTOCOL.md",
+      "?? OldIron/",
+      "?? PROJECT_ISSUES_PLAIN.md",
+      "?? data/",
+      "?? experiments_log/CHANGELOG.md",
+      "?? experiments_log/INVALID_METHODS_REGISTRY.md",
+      "?? experiments_log/README.md",
+      "?? experiments_log/runs/",
+      "?? scripts/audit_spectral_bands.py",
+      "?? scripts/probes/",
+      "?? scripts/restamp_run_logs.py",
+      "?? scripts/run_with_log.py"
+    ]
+  },
+  "restamped_at": "2026-10-09T07:30:59.879608+00:00"
+}

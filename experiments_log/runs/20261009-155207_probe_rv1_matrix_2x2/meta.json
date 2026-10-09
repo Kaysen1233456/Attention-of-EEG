@@ -1,0 +1,68 @@
+{
+  "run_name": "probe_rv1_matrix_2x2",
+  "note": "RV-1 修复后重跑：折安全校准（协议 v1.3 方案 A），校准窗从评估集剔除；替代已作废的 probe5_2x2",
+  "started_at": "2026-10-09T07:52:07.310613+00:00",
+  "command": [
+    "C:/Users/famsun/Attention/OldIron/python.exe",
+    "scripts/probes/matrix_probe.py"
+  ],
+  "command_line": "C:/Users/famsun/Attention/OldIron/python.exe scripts/probes/matrix_probe.py",
+  "cwd": "C:\\Users\\famsun\\Attention",
+  "python": "3.12.15 | packaged by Anaconda, Inc. | (main, Oct  1 2026, 20:14:50) [MSC v.1942 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\famsun\\Attention\\OldIron\\python.exe",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "packages": {
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "torch": "2.5.1+cu121",
+    "sklearn": "1.9.1",
+    "mne": null,
+    "pandas": null
+  },
+  "git": {
+    "branch": "main",
+    "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+    "sha_short": "4d73343",
+    "remote": "git@github.com:Kaysen1233456/Attention-of-EEG.git",
+    "dirty": true,
+    "status_porcelain": [
+      "M GEN5_PROTOCOL.md",
+      " M PROJECT_MEMORY.md",
+      " M PROJECT_STATE.md",
+      " M README.md",
+      " M TEACHER_AAMP_DISTILLATION_ROADMAP.md",
+      " M TEACHER_NEXT_STEPS.md",
+      " M scripts/audit_mental_arithmetic.py",
+      " M scripts/audit_teacher_b_data.py",
+      " M scripts/baseline_spectral.py",
+      " M scripts/cv_feature_fusion.py",
+      " M scripts/cv_spectral.py",
+      " M scripts/final_spectral_cnn.py",
+      " M scripts/train_gen5_seeds.py",
+      " M tests/test_audit_fold2.py",
+      " M tests/test_config.yaml",
+      "?? CALIBRATION_PROTOCOL.md",
+      "?? OldIron/",
+      "?? PROJECT_ISSUES_PLAIN.md",
+      "?? data/",
+      "?? experiments_log/CHANGELOG.md",
+      "?? experiments_log/INVALID_METHODS_REGISTRY.md",
+      "?? experiments_log/README.md",
+      "?? experiments_log/runs/",
+      "?? scripts/audit_spectral_bands.py",
+      "?? scripts/probes/",
+      "?? scripts/restamp_run_logs.py",
+      "?? scripts/run_with_log.py"
+    ]
+  },
+  "finished_at": "2026-10-09T07:53:52.139161+00:00",
+  "duration_seconds": 99.78,
+  "exit_code": 0,
+  "success": true,
+  "error": null,
+  "artifacts": {
+    "stdout": "experiments_log\\runs\\20261009-155207_probe_rv1_matrix_2x2\\stdout.log",
+    "stderr": "experiments_log\\runs\\20261009-155207_probe_rv1_matrix_2x2\\stderr.log",
+    "combined": "experiments_log\\runs\\20261009-155207_probe_rv1_matrix_2x2\\combined.log"
+  }
+}

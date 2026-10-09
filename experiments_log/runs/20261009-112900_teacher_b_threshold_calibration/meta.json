@@ -1,0 +1,96 @@
+{
+  "run_name": "teacher_b_threshold_calibration",
+  "note": "嵌套 CV 阈值校准（8 外折 × 4 内折 × 3 seed），对比固定阈值 0.5",
+  "captured": "backfilled",
+  "backfill_disclaimer": "本日志为事后回填（backfilled）：原始运行发生在加日志规范之前，内容根据 summary.json 产物与终端输出重建，非实时捕获。后续所有运行请使用 scripts/run_with_log.py 实时捕获。",
+  "command": [
+    "python",
+    "scripts/run_with_log.py",
+    "--name",
+    "teacher_b_threshold_calibration",
+    "--",
+    "python",
+    "scripts/calibrate_teacher_b_threshold.py",
+    "--output",
+    "artifacts/teacher_b_calibration"
+  ],
+  "command_actual": "cd C:\\Users\\famsun\\Attention && PYTHONPATH=src:scripts ./OldIron/python.exe scripts/calibrate_teacher_b_threshold.py --output \"C:\\Users\\Raymond James\\WorkBuddy AI\\2026-10-09-10-41-57\\artifacts_out\\teacher_b_calibration\"",
+  "command_line": "python scripts/run_with_log.py --name teacher_b_threshold_calibration -- python scripts/calibrate_teacher_b_threshold.py --output artifacts/teacher_b_calibration",
+  "cwd": "C:\\Users\\famsun\\Attention",
+  "python": "3.12.15 (Anaconda, OldIron)",
+  "python_executable": "C:\\Users\\famsun\\Attention\\OldIron\\python.exe",
+  "packages": {
+    "numpy": "2.x",
+    "torch": "2.5.1+cu121",
+    "sklearn": "?",
+    "scipy": "?"
+  },
+  "git": {
+    "branch": "main",
+    "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+    "sha_short": "4d73343",
+    "remote": "git@github.com:Kaysen1233456/Attention-of-EEG.git",
+    "dirty": true,
+    "status_porcelain": [
+      "M GEN5_PROTOCOL.md",
+      " M PROJECT_MEMORY.md",
+      " M PROJECT_STATE.md",
+      " M README.md",
+      " M TEACHER_AAMP_DISTILLATION_ROADMAP.md",
+      " M TEACHER_NEXT_STEPS.md",
+      " M scripts/audit_mental_arithmetic.py",
+      " M scripts/audit_teacher_b_data.py",
+      " M scripts/baseline_spectral.py",
+      " M scripts/cv_feature_fusion.py",
+      " M scripts/cv_spectral.py",
+      " M scripts/final_spectral_cnn.py",
+      " M scripts/train_gen5_seeds.py",
+      " M tests/test_audit_fold2.py",
+      " M tests/test_config.yaml",
+      "?? CALIBRATION_PROTOCOL.md",
+      "?? OldIron/",
+      "?? PROJECT_ISSUES_PLAIN.md",
+      "?? data/",
+      "?? experiments_log/CHANGELOG.md",
+      "?? experiments_log/INVALID_METHODS_REGISTRY.md",
+      "?? experiments_log/README.md",
+      "?? experiments_log/runs/",
+      "?? scripts/audit_spectral_bands.py",
+      "?? scripts/probes/",
+      "?? scripts/restamp_run_logs.py",
+      "?? scripts/run_with_log.py"
+    ]
+  },
+  "duration_seconds": 612.0,
+  "exit_code": 0,
+  "success": true,
+  "artifacts": {
+    "stdout": "20261009-112900_teacher_b_threshold_calibration/stdout.log",
+    "stderr": "20261009-112900_teacher_b_threshold_calibration/stderr.log",
+    "combined": "20261009-112900_teacher_b_threshold_calibration/combined.log"
+  },
+  "verdict": "CALIBRATION_NO_GAIN",
+  "result": {
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "outer_folds": 8,
+    "inner_folds": 4,
+    "overall_fixed_05_ba": 0.6693,
+    "overall_calibrated_ba": 0.6681,
+    "overall_auc": 0.7309,
+    "threshold_mean": 0.494,
+    "test_accessed": false
+  },
+  "sha_history": [
+    {
+      "sha": "4d7334336b63a6d8468f2c7bae341d341d33ea30",
+      "sha_short": "4d73343",
+      "stamped_at": "2026-10-09T07:30:59.118756+00:00",
+      "note": "initial (migrated from meta.git)"
+    }
+  ],
+  "restamped_at": "2026-10-09T07:30:59.118756+00:00"
+}

@@ -1,0 +1,11 @@
+[stdout] teacher_b_threshold_calibration
+[stdout] stage=threshold_calibration  seeds=[42, 43, 44]  outer_folds=8  inner_folds=4
+[stdout] test_accessed=False
+[stdout] seed 42  fixed_0.5_BA=0.6531  calibrated_BA=0.6511  AUC=0.7236
+[stdout] seed 43  fixed_0.5_BA=0.6930  calibrated_BA=0.6910  AUC=0.7457
+[stdout] seed 44  fixed_0.5_BA=0.6619  calibrated_BA=0.6623  AUC=0.7234
+[stdout] overall_fixed_05_ba   = 0.6693
+[stdout] overall_calibrated_ba = 0.6681   (delta = -0.0012)
+[stdout] overall_auc           = 0.7309   (阈值不改变 AUC)
+[stdout] selected thresholds: n=24  min=0.380  max=0.620  mean=0.494
+[stdout] wrote artifacts/teacher_b_calibration/summary.json

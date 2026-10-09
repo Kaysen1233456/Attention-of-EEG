@@ -1,0 +1,22 @@
+[stdout] === 首次运行（修复前）===
+[stderr] Traceback (most recent call last):
+[stderr]   File "scripts/audit_teacher_b_data.py", line 39, in summarize_subject
+[stderr]     total = np.trapz(psd[..., total_mask], frequencies[total_mask], axis=-1) + 1e-12
+[stderr] AttributeError: `np.trapz` was removed in the NumPy 2.0 release.
+[stderr]   Use `scipy.integrate` trapezoid function instead.
+[stdout] === 加 2 行兼容垫片后重跑 ===
+[stdout] {
+[stdout]   "output": "artifacts/teacher_b_data_audit.json",
+[stdout]   "errors": [],
+[stdout]   "comparison": {
+[stdout]     "fold5_mean_windows": 91.0,
+[stdout]     "other_mean_windows": 89.07142857142857,
+[stdout]     "fold5_mean_rms": 8.80099594269268e-06,
+[stdout]     "other_mean_rms": 1.0231300913281821e-05,
+[stdout]     "fold5_mean_class_delta_rms": 2.7159387627762044e-07,
+[stdout]     "other_mean_class_delta_rms": -1.2475234793133235e-06,
+[stdout]     "fold5_nonfinite_samples": 0,
+[stdout]     "fold5_constant_windows": 0,
+[stdout]     "fold5_zero_windows": 0
+[stdout]   }
+[stdout] }

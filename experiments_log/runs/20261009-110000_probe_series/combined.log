@@ -1,0 +1,33 @@
+[probe 1/5] confound_probe.py --conditions A B C D --epochs 15
+  A 原样 91rest+31focus  n=3850  window_BA=0.6854  AUC=0.7342  fold_std=0.0395  min=0.6144  >0.60: 22/32
+  B 时长匹配 31+31       n=1984  window_BA=0.6885  AUC=0.7087  fold_std=0.0430  min=0.6210  >0.60: 24/32
+  C 位置对照             n=1984  window_BA=0.6724  AUC=0.7042  fold_std=0.0469  min=0.5887  >0.60: 21/32
+  D 标签打乱（零假设）    n=1984  window_BA=0.5252  AUC=0.5131  fold_std=0.0166  min=0.5081  >0.60:  1/32
+  -> B 相对 A 不掉分（0.6885 vs 0.6854）=> 无时长伪相关；D 回到随机 => 信号真实
+
+[probe 2/5] domain_probe.py  (40 维线性模型, 时长匹配)
+  N0 原始                  window_BA=0.6255  AUC=0.6751  >0.60: 15/32
+  N1 +被试级标准化          window_BA=0.6976  AUC=0.7551  >0.60: 26/32   (+7.2 BA / +8.0 AUC)
+  N2 +被试×通道标准化       window_BA=0.6976  AUC=0.7551  >0.60: 26/32   (与 N1 相同)
+
+[probe 3/5] cnn_domain_probe.py  (Gen5 CNN, 时长匹配)
+  S0 Gen5 baseline          window_BA=0.6905  AUC=0.7102  fold_std=0.0401  min=0.6371  >0.60: 24/32
+  S1 Gen5 +被试级标准化      window_BA=0.7440  AUC=0.8046  fold_std=0.0821  min=0.6089  >0.60: 28/32   (+5.4 BA / +9.4 AUC)
+  S2 S1 的 3-seed 同架构集成 window_BA=0.7344  AUC=0.8061  fold_std=0.0831  min=0.5968  >0.60: 27/32   (集成反而 -1.0)
+
+[probe 4/5] teacherB_probe.py  (Teacher B, 三配置)
+  T0 原样 无标准化          window_BA=0.7071  AUC=0.7565  fold_std=0.0474  min=0.6353  >0.60: 26/32
+  T1 时长匹配 无标准化       window_BA=0.6613  AUC=0.6761  fold_std=0.0474  min=0.5847  >0.60: 23/32
+  T2 时长匹配 +被试级标准化   window_BA=0.7308  AUC=0.7950  fold_std=0.0756  min=0.6129  >0.60: 28/32   (+6.9 BA / +11.9 AUC)
+
+[probe 5/5] matrix_probe.py  (决定性 2x2，同协议：原样 91+31, 8-fold GroupKFold, epochs=15)
+                       无标准化       +被试级标准化     增益
+  Gen5 学生 (8,418 参数)  0.6943        0.7359        +4.16
+  Teacher B (193,202 参数) 0.7071        0.7405        +3.34
+  教师相对学生领先          +1.28         +0.46
+
+  参数量比 = 22.95x ；折间 std = ±0.037~0.050
+  -> 教师领先 0.46~1.28 分，落在噪声带内；标准化增益是教师优势的 3~8 倍
+
+[资源] Gen5: 8,418 参数 / 8.2 KB INT8 / 2.37 M MACs
+[资源] Teacher B: 193,202 参数 / 189 KB INT8 / 13.0 M MACs

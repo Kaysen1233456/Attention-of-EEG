@@ -1,0 +1,43 @@
+Traceback (most recent call last):
+  File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 221, in <module>
+    main()
+  File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 212, in main
+    out["results"].append(evaluate_setting("S1_Gen5_+subject_std_spectral", xw, f_cal, ys, grp, seeds=(42,)))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 147, in evaluate_setting
+    m = train(xw, xs, y, tr, va, sd + f)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 126, in train
+    loss = crit(model(xb.to(DEVICE), sb.to(DEVICE)), yb.to(DEVICE))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\scripts\probes\cnn_domain_probe.py", line 97, in forward
+    s = self.spectral(xs)
+        ^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\container.py", line 250, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\modules\normalization.py", line 217, in forward
+    return F.layer_norm(
+           ^^^^^^^^^^^^^
+  File "C:\Users\famsun\Attention\OldIron\Lib\site-packages\torch\nn\functional.py", line 2900, in layer_norm
+    return torch.layer_norm(
+           ^^^^^^^^^^^^^^^^^
+RuntimeError: expected scalar type Double but found Float
