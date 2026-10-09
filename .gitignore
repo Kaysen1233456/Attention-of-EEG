@@ -11,15 +11,21 @@ build/
 # 数据文件（大文件，不提交到git）
 data/raw/
 data/processed/
+data/download/
 ds007169-download/
 *.npy
 *.npz
 *.mat
 *.zip
 
+# 本地运行时（项目自带 Python / 虚拟环境，GB 级）
+OldIron/
+
 # 实验产物（模型文件、训练结果）
 artifacts/*
 !artifacts/.gitkeep
+# 例外：探针结果是小体积 JSON/README，必须提交以便回溯查看
+!artifacts/probes/
 
 # IDE
 .vscode/
@@ -34,6 +40,10 @@ Thumbs.db
 # 日志
 *.log
 logs/
+# 例外：experiments_log/runs/ 下的运行日志正文必须提交
+# （否则 run_with_log.py 写出的 combined/stdout/stderr 会被 *.log 拦掉，
+#   回溯时只剩 meta.json，看不到任何实际输出）
+!experiments_log/runs/**/*.log
 
 # 临时文件
 *.tmp
