@@ -14,6 +14,10 @@ from scipy.signal import welch
 
 from cv_spectral_cnn import load_development
 
+# NumPy 2.0 renamed trapz to trapezoid. Keep the compatibility choice local
+# instead of mutating the numpy module at import time.
+integrate_trapezoid = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
+
 BANDS = {
     "delta": (1.0, 4.0), "theta": (4.0, 8.0), "alpha": (8.0, 13.0),
     "beta": (13.0, 30.0), "gamma": (30.0, 45.0),
@@ -36,11 +40,11 @@ def summarize_subject(x, y, subject_id, name, start, end, sampling_rate):
     xs, ys = x[start:end], y[start:end]
     frequencies, psd = welch(xs, fs=sampling_rate, nperseg=min(250, xs.shape[-1]), axis=-1)
     total_mask = (frequencies >= 1) & (frequencies <= 45)
-    total = np.trapz(psd[..., total_mask], frequencies[total_mask], axis=-1) + 1e-12
+    total = integrate_trapezoid(psd[..., total_mask], frequencies[total_mask], axis=-1) + 1e-12
     band_power = {}
     for band, (low, high) in BANDS.items():
         mask = (frequencies >= low) & (frequencies < high)
-        power = np.trapz(psd[..., mask], frequencies[mask], axis=-1)
+        power = integrate_trapezoid(psd[..., mask], frequencies[mask], axis=-1)
         band_power[band] = float(np.mean(power / total))
     rms = np.sqrt(np.mean(xs * xs, axis=-1))
     return {

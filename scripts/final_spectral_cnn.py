@@ -1,4 +1,4 @@
-"""Train the fixed Gen5 model on development data and evaluate test once."""
+"""Reproduce a frozen Gen5 run against the already exposed holdout."""
 import argparse
 import copy
 import json
@@ -50,10 +50,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data/processed/mental_arithmetic_250hz_8ch")
     parser.add_argument("--epochs", type=int, default=15)
-    parser.add_argument("--batch-size", type=int, default=64)
+    # 冻结值：与 GEN5_PROTOCOL.md「冻结超参数」一致。不得改为其他值。
+    parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", default="artifacts/gen5_final")
+    parser.add_argument(
+        "--allow-exposed-test",
+        action="store_true",
+        help="Required for historical holdout reproduction; never use this run for selection.",
+    )
     args = parser.parse_args()
+    if not args.allow_exposed_test:
+        parser.error(
+            "The Gen5 test holdout is already exposed. Pass --allow-exposed-test only "
+            "to reproduce a historical run; do not use it for model selection."
+        )
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     root = Path(args.data)
@@ -82,11 +93,12 @@ def main():
             losses.append(loss.item())
         print(f"Epoch {epoch + 1:02d}/{args.epochs} loss={np.mean(losses):.4f}", flush=True)
 
-    # This is the only test evaluation in this final protocol.
+    # This holdout is exposed and is retained only for historical reproduction.
     test_loader = DataLoader(TensorDataset(torch.from_numpy(test_x), torch.from_numpy(test_y)), batch_size=args.batch_size)
     test_prob, test_labels = collect(model, test_loader, device)
     result = {
-        "protocol": "fixed Gen5; train+val fit; one final test evaluation",
+        "protocol": "frozen Gen5; train+val fit; exposed holdout reproduction",
+        "test_status": "exposed_holdout_not_for_selection",
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "seed": args.seed,

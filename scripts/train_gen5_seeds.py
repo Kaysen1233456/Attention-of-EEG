@@ -1,4 +1,4 @@
-"""Run the fixed Gen5 protocol for seeds 42, 43, and 44."""
+"""Reproduce historical Gen5 exposed-holdout runs for seeds 42, 43, and 44."""
 import argparse
 import json
 import subprocess
@@ -26,6 +26,7 @@ def main():
             "--batch-size", str(args.batch_size),
             "--seed", str(seed),
             "--output", str(target),
+            "--allow-exposed-test",
         ]
         subprocess.run(command, check=True)
         result = json.loads((target / "results.json").read_text(encoding="utf-8"))
@@ -33,7 +34,8 @@ def main():
     metric_names = ("balanced_accuracy", "macro_f1", "roc_auc")
     label_hashes = sorted({row["test_labels_sha256"] for row in rows})
     summary = {
-        "protocol": "fixed Gen5; identical test labels across seeds; one evaluation per seed",
+        "protocol": "frozen Gen5; identical exposed-holdout labels across historical runs",
+        "test_status": "exposed_holdout_not_for_selection",
         "seeds": args.seeds,
         "same_test_labels": len(label_hashes) == 1,
         "test_labels_sha256": label_hashes,

@@ -92,6 +92,23 @@ output:
   save_checkpoint_every: 0
   save_config: true
   use_tensorboard: true
+pretraining:
+  bands:
+    alpha:
+    - 8.0
+    - 13.0
+    beta:
+    - 13.0
+    - 30.0
+    delta:
+    - 0.5
+    - 4.0
+    theta:
+    - 4.0
+    - 8.0
+  mask_bands:
+  - alpha
+  masking: frequency
 project_name: EEG-Attention-Decoding
 random_seed: 42
 search:
@@ -135,6 +152,7 @@ search:
     - float
 training:
   batch_size: 32
+  class_weights: null
   consistency_lambda: 0.0
   early_stopping_metric: val_loss
   early_stopping_patience: 5

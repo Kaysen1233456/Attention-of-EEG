@@ -12,16 +12,17 @@ from sklearn.preprocessing import StandardScaler
 
 
 BANDS = ((1, 4), (4, 8), (8, 13), (13, 30), (30, 45))
+integrate_trapezoid = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
 
 
 def features(x):
     frequency, power = welch(x, fs=250, nperseg=250, axis=-1)
     total_mask = (frequency >= 1) & (frequency <= 45)
-    total = np.trapz(power[..., total_mask], frequency[total_mask], axis=-1) + 1e-12
+    total = integrate_trapezoid(power[..., total_mask], frequency[total_mask], axis=-1) + 1e-12
     values = []
     for low, high in BANDS:
         mask = (frequency >= low) & (frequency < high)
-        band = np.trapz(power[..., mask], frequency[mask], axis=-1)
+        band = integrate_trapezoid(power[..., mask], frequency[mask], axis=-1)
         values.append(np.log(band / total + 1e-12))
     return np.concatenate(values, axis=1)
 

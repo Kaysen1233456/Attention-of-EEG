@@ -1,5 +1,8 @@
 # EEG Attention Decoding
 
+> 当前主线是 Mental Arithmetic 的 Gen5 student baseline 与 Teacher B candidate。
+> Ear-SAAD Transformer teacher 路线已放弃，README 中相关内容仅为历史记录，不应继续训练或蒸馏。
+
 Gen5 的固定模型、改动原因、交叉验证结果和最终测试协议记录在
 [GEN5_PROTOCOL.md](GEN5_PROTOCOL.md)。
 

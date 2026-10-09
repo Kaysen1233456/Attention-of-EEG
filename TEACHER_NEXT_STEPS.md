@@ -1,4 +1,8 @@
-# Teacher recovery and improvement plan
+# Teacher recovery and improvement plan (Historical Ear-SAAD Archive)
+
+> This Ear-SAAD route was abandoned. Do not execute the commands in this file.
+> The active teacher work is Mental Arithmetic Teacher B and is governed by
+> `TEACHER_PROTOCOL.md` and `CALIBRATION_PROTOCOL.md`.
 
 ## Objective
 

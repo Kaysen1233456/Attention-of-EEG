@@ -1,4 +1,10 @@
-# EEG Attention Project State
+# EEG Attention Project State (Historical Archive)
+
+> Ear-SAAD Transformer teacher and CNN distillation route were abandoned and are
+> archived. Do not start new Ear-SAAD training, search, or distillation from this
+> document. The active route is the Mental Arithmetic Gen5 / Teacher B protocol
+> documented in `GEN5_PROTOCOL.md`, `TEACHER_PROTOCOL.md`, and
+> `CALIBRATION_PROTOCOL.md`.
 
 Updated: 2026-09-18
 

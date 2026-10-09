@@ -14,12 +14,13 @@ BANDS = {
     "beta": (13.0, 30.0),
     "gamma": (30.0, 45.0),
 }
+integrate_trapezoid = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
 
 
 def summarize(x, y, subject_names, sampling_rate):
     frequencies, psd = welch(x, fs=sampling_rate, nperseg=min(250, x.shape[-1]), axis=-1)
     total_mask = (frequencies >= 1.0) & (frequencies <= 45.0)
-    total_power = np.trapz(psd[..., total_mask], frequencies[total_mask], axis=-1) + 1e-12
+    total_power = integrate_trapezoid(psd[..., total_mask], frequencies[total_mask], axis=-1) + 1e-12
     rms = np.sqrt(np.mean(x * x, axis=-1))
     starts = np.r_[0, np.flatnonzero(y[1:] != y[:-1]) + 1, len(y)]
     runs = list(zip(starts[:-1], starts[1:]))
@@ -33,7 +34,7 @@ def summarize(x, y, subject_names, sampling_rate):
             band_values = {}
             for band, (low, high) in BANDS.items():
                 mask = (frequencies >= low) & (frequencies < high)
-                power = np.trapz(psd[start:end, :, mask], frequencies[mask], axis=-1)
+                power = integrate_trapezoid(psd[start:end, :, mask], frequencies[mask], axis=-1)
                 band_values[band] = float(np.mean(power / total_power[start:end]))
             subject_row["classes"][str(label)] = {
                 "n_windows": int(end - start),

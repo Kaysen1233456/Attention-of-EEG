@@ -1,4 +1,7 @@
-# Attention-of-EEG 项目记忆
+# Attention-of-EEG 项目记忆（历史归档）
+
+> Ear-SAAD 路线已放弃，仅保留作历史记录。当前工作只针对心算 EEG 的
+> Gen5 student baseline、Teacher B candidate 和被试级校准协议。
 
 更新时间：2026-09-20
 

@@ -16,7 +16,7 @@ def test_audit_split_arrays_reports_trial_label_conflicts_and_zero_channels():
     report = audit_split_arrays(waveforms, labels, subjects, trials)
 
     assert report["n_windows"] == 4
-    assert report["trial_label_conflicts"] == 1
+    assert report["trial_report"]["trial_label_conflicts"] == 1
     assert report["zero_channel_fraction"] == 0.875
     assert report["subjects"]["3"]["n_windows"] == 2
 
